@@ -23,7 +23,7 @@ export default function InfoPage() {
 
   useEffect(() => {
     const fetchInfo = async () => {
-      const { data, error } = await supabase.from('planting_info').select(*)
+      const { data, error } = await supabase.from('planting_info').select('*');
         // const { data, error } = await supabase
         //     .from('planting_info')
         //     .select(`
