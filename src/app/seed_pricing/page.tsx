@@ -72,12 +72,13 @@ export default function PricingPage() {
   ];
 
     const [searchText, setSearchText] = useState('');
-    const filteredPrices = prices.filter(
-    (price) =>
-        price.seed_cost?.toLowerCase().includes(searchText.toLowerCase()) ||
-        price.payment_fee?.toLowerCase().includes(searchText.toLowerCase()) ||
-        price.test_price?.toLowerCase().includes(searchText.toLowerCase())
-    );
+    const filteredPrices = prices;
+    //   .filter(
+    // (price) =>
+    //     price.seed_cost?.toLowerCase().includes(searchText.toLowerCase()) ||
+    //     price.payment_fee?.toLowerCase().includes(searchText.toLowerCase()) ||
+    //     price.test_price?.toLowerCase().includes(searchText.toLowerCase())
+    // );
 
   return (
     <div style={{ height: '100%', width: '100%', padding: '1rem' }}>
