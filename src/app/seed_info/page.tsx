@@ -15,6 +15,9 @@ interface SeedInfo {
   plant_height: string;
   days_to_bloom: number;
   scoville: number;
+  category: string;
+  type: string;
+  color: string;
 }
 
 export default function InfoPage() {
@@ -24,15 +27,6 @@ export default function InfoPage() {
   useEffect(() => {
     const fetchInfo = async () => {
       const { data, error } = await supabase.from('planting_info').select('*');
-        // const { data, error } = await supabase
-        //     .from('planting_info')
-        //     .select(`
-        //         *,
-        //         seeds (
-        //         category,
-        //         type
-        //         )
-        //     `)
       if (error) {
         console.error('Error fetching info:', error);
       } else {
@@ -46,6 +40,9 @@ export default function InfoPage() {
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90, sortable: true, editable: false },
     { field: 'seed_id', headerName: 'Seed ID', width: 130, sortable: true, editable: false },
+    { field: 'category', headerName: 'Category', width: 130, sortable: true, editable: false },
+    { field: 'type', headerName: 'Type', width: 130, sortable: true, editable: false },
+    { field: 'color', headerName: 'Color', width: 130, sortable: true, editable: false },
     { field: 'plant_depth', headerName: 'Plant Depth', width: 150, sortable: true, editable: true },
     { field: 'plant_spacing', headerName: 'Plant Spacing', width: 130, sortable: true, editable: true },
     { field: 'days_to_germinate', headerName: 'Days to Germinate', width: 150, sortable: true, editable: true },
@@ -57,8 +54,9 @@ export default function InfoPage() {
     const [searchText, setSearchText] = useState('');
     const filteredInfo = info.filter(
     (infos) =>
-        infos.plant_depth?.toLowerCase().includes(searchText.toLowerCase()) ||
-        infos.plant_height?.toLowerCase().includes(searchText.toLowerCase())
+        infos.category?.toLowerCase().includes(searchText.toLowerCase()) ||
+        infos.type?.toLowerCase().includes(searchText.toLowerCase()) ||
+        infos.color?.toLowerCase().includes(searchText.toLowerCase())
     );
 
   return (
