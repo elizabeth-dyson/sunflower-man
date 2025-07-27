@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { supabase } from '@/lib/supabaseClient';
 import { Box } from '@mui/material';
-import { Timestamp } from 'next/dist/server/lib/cache-handlers/types';
 
 
 interface SeedInventory {
@@ -13,15 +12,14 @@ interface SeedInventory {
   amount_per_packet: number;
   unit: string;
   number_packets: number;
-  date_received: Timestamp;
+  date_received: string;
   shelf_life_years: number;
-  expiration_date: Timestamp;
+  expiration_date: string;
   buy_more: boolean;
   notes: string;
-  // seeds?: {
-  //   category: string;
-  //   type: string;
-  // };
+  category: string;
+  type: string;
+  color: string;
 }
 
 export default function InventoryPage() {
@@ -31,15 +29,6 @@ export default function InventoryPage() {
   useEffect(() => {
     const fetchInventory = async () => {
       const { data, error } = await supabase.from('inventory').select('*');
-        // const { data, error } = await supabase
-        //     .from('inventory')
-        //     .select(`
-        //         *,
-        //         seeds (
-        //         category,
-        //         type
-        //         )
-        //     `)
       if (error) {
         console.error('Error fetching inventory:', error);
       } else {
@@ -53,18 +42,9 @@ export default function InventoryPage() {
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90, sortable: true, editable: false },
     { field: 'seed_id', headerName: 'Seed ID', width: 130, sortable: true, editable: false },
-    // {
-    //     field: 'category',
-    //     headerName: 'Category',
-    //     width: 130,
-    //     valueGetter: (params) => params.row.seeds?.category ?? 'N/A',
-    // },
-    // {
-    //     field: 'type',
-    //     headerName: 'Type',
-    //     width: 130,
-    //     valueGetter: (params) => params.row.seeds?.type ?? 'N/A',
-    // },
+    { field: 'category', headerName: 'Category', width: 130, sortable: true, editable: false },
+    { field: 'type', headerName: 'Type', width: 130, sortable: true, editable: false },
+    { field: 'color', headerName: 'Color', width: 130, sortable: true, editable: false },
     { field: 'amount_per_packet', headerName: 'Amount per Packet', width: 150, sortable: true, editable: true },
     { field: 'unit', headerName: 'Unit', width: 130, sortable: true, editable: true },
     { field: 'number_packets', headerName: 'Number of Packets', width: 150, sortable: true, editable: true },
@@ -79,7 +59,10 @@ export default function InventoryPage() {
     const filteredInventory = inventory.filter(
     (inv) =>
         inv.notes?.toLowerCase().includes(searchText.toLowerCase()) ||
-        inv.unit?.toLowerCase().includes(searchText.toLowerCase())
+        inv.unit?.toLowerCase().includes(searchText.toLowerCase()) ||
+        inv.category?.toLowerCase().includes(searchText.toLowerCase()) ||
+        inv.type?.toLowerCase().includes(searchText.toLowerCase()) ||
+        inv.color?.toLowerCase().includes(searchText.toLowerCase())
     );
 
   return (
