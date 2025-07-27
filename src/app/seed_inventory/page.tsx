@@ -30,7 +30,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     const fetchInventory = async () => {
-      const { data, error } await supabase.from('inventory').select(*)
+      const { data, error } await supabase.from('inventory').select('*');
         // const { data, error } = await supabase
         //     .from('inventory')
         //     .select(`
