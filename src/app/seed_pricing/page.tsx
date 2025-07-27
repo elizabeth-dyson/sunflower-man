@@ -17,13 +17,16 @@ interface SeedPricing {
   retail_price: number;
   payment_fee: number;
   retail_price_with_postage: number;
-  sales_price_total: number,
-  net_profit: number,
-  test_price: number,
-  test_profit: number,
-  seeds_per_envelope: number,
-  inventory_id: number,
-  test_fee: number
+  sales_price_total: number;
+  net_profit: number;
+  test_price: number;
+  test_profit: number;
+  seeds_per_envelope: number;
+  inventory_id: number;
+  test_fee: number;
+  category: string;
+  type: string;
+  color: string;
 }
 
 export default function PricingPage() {
@@ -33,15 +36,6 @@ export default function PricingPage() {
   useEffect(() => {
     const fetchPrices = async () => {
       const { data, error } = await supabase.from('costs_and_pricing').select('*');
-        // const { data, error } = await supabase
-        //     .from('costs_and_pricing')
-        //     .select(`
-        //         *,
-        //         seeds (
-        //         category,
-        //         type
-        //         )
-        //     `)
       if (error) {
         console.error('Error fetching prices:', error);
       } else {
@@ -55,31 +49,33 @@ export default function PricingPage() {
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90, sortable: true, editable: false },
     { field: 'seed_id', headerName: 'Seed ID', width: 130, sortable: true, editable: false },
+    { field: 'inventory_id', headerName: 'Inventory ID', width: 130, sortable: true, editable: false },
+    { field: 'category', headerName: 'Category', width: 130, sortable: true, editable: false },
+    { field: 'type', headerName: 'Type', width: 130, sortable: true, editable: false },
+    { field: 'color', headerName: 'Color', width: 130, sortable: true, editable: false },
+    { field: 'seeds_per_envelope', headerName: 'Seeds per Bag/Envelope', width: 130, sortable: true, editable: false },
     { field: 'seed_cost', headerName: 'Seed Cost', width: 150, sortable: true, editable: true },
     { field: 'bag_cost', headerName: 'Bag?', width: 130, sortable: true, editable: true },
     { field: 'envelope_cost', headerName: 'Envelope?', width: 150, sortable: true, editable: true },
     { field: 'total_cost', headerName: 'Total Cost', width: 180, sortable: true, editable: false },
-    { field: 'postage', headerName: 'Postage', width: 130, sortable: true, editable: true },
     { field: 'retail_price', headerName: 'Retail Price', width: 130, sortable: true, editable: true },
-    { field: 'payment_fee', headerName: 'Payment Fee', width: 130, sortable: true, editable: false },
+    { field: 'postage', headerName: 'Postage', width: 130, sortable: true, editable: true },
     { field: 'retail_price_with_postage', headerName: 'Retail + Postage', width: 100, sortable: true, editable: false },
+    { field: 'payment_fee', headerName: 'Payment Fee', width: 130, sortable: true, editable: false },
     { field: 'sales_price_total', headerName: 'Total Sales Price', width: 130, sortable: true, editable: false },
     { field: 'net_profit', headerName: 'Net Profit', width: 130, sortable: true, editable: false },
     { field: 'test_price', headerName: 'Test Price', width: 130, sortable: true, editable: true },
-    { field: 'test_profit', headerName: 'Test Profit', width: 130, sortable: true, editable: false },
-    { field: 'seeds_per_envelope', headerName: 'Seeds per Envelope', width: 130, sortable: true, editable: false },
-    { field: 'inventory_id', headerName: 'Inventory ID', width: 130, sortable: true, editable: false },
     { field: 'test_fee', headerName: 'Test Fee', width: 130, sortable: true, editable: false },
+    { field: 'test_profit', headerName: 'Test Profit', width: 130, sortable: true, editable: false },
   ];
 
     const [searchText, setSearchText] = useState('');
-    const filteredPrices = prices;
-    //   .filter(
-    // (price) =>
-    //     price.seed_cost?.toLowerCase().includes(searchText.toLowerCase()) ||
-    //     price.payment_fee?.toLowerCase().includes(searchText.toLowerCase()) ||
-    //     price.test_price?.toLowerCase().includes(searchText.toLowerCase())
-    // );
+    const filteredPrices = prices.filter(
+    (price) =>
+        price.category?.toLowerCase().includes(searchText.toLowerCase()) ||
+        price.type?.toLowerCase().includes(searchText.toLowerCase()) ||
+        price.color?.toLowerCase().includes(searchText.toLowerCase())
+    );
 
   return (
     <div style={{ height: '100%', width: '100%', padding: '1rem' }}>
