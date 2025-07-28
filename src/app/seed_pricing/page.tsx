@@ -78,7 +78,7 @@ export default function PricingPage() {
     price.color?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleRowUpdate = async (newRow: any) => {
+  const handleRowUpdate = async (newRow: SeedPricing) => {
     const updates = {
       seed_cost: newRow.seed_cost,
       bag_cost: newRow.bag_cost,

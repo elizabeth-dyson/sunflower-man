@@ -66,7 +66,7 @@ export default function SeedsPage() {
     seed.botanical_name?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleRowUpdate = async (newRow: any) => {
+  const handleRowUpdate = async (newRow: SeedType) => {
     console.log('Updating row in Supabase:', newRow);
 
     const updates = {

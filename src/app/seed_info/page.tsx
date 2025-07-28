@@ -60,7 +60,7 @@ export default function InfoPage() {
     infos.color?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleRowUpdate = async (newRow: any, oldRow: any) => {
+  const handleRowUpdate = async (newRow: SeedInfo) => {
     const updates = {
       plant_depth: newRow.plant_depth,
       plant_spacing: newRow.plant_spacing,

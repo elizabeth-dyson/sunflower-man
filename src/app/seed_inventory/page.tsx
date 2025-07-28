@@ -66,7 +66,7 @@ export default function InventoryPage() {
     inv.color?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleRowUpdate = async (newRow: any, oldRow: any) => {
+  const handleRowUpdate = async (newRow: SeedInventory) => {
     const updates = {
       amount_per_packet: newRow.amount_per_packet,
       unit: newRow.unit,
