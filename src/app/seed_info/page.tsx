@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { supabase } from '@/lib/supabaseClient';
 import { Box } from '@mui/material';
+import Link from 'next/link';
 
 
 interface SeedInfo {
@@ -51,16 +52,59 @@ export default function InfoPage() {
     { field: 'scoville', headerName: 'Scoville', width: 130, sortable: true, editable: true },
   ];
 
-    const [searchText, setSearchText] = useState('');
-    const filteredInfo = info.filter(
-    (infos) =>
-        infos.category?.toLowerCase().includes(searchText.toLowerCase()) ||
-        infos.type?.toLowerCase().includes(searchText.toLowerCase()) ||
-        infos.color?.toLowerCase().includes(searchText.toLowerCase())
-    );
+  const [searchText, setSearchText] = useState('');
+  const filteredInfo = info.filter(
+  (infos) =>
+    infos.category?.toLowerCase().includes(searchText.toLowerCase()) ||
+    infos.type?.toLowerCase().includes(searchText.toLowerCase()) ||
+    infos.color?.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleRowUpdate = async (newRow: any, oldRow: any) => {
+    const updates = {
+      plant_depth: newRow.plant_depth,
+      plant_spacing: newRow.plant_spacing,
+      days_to_germinate: newRow.days_to_germinate,
+      plant_height: newRow.plant_height,
+      days_to_bloom: newRow.days_to_bloom,
+      scoville: newRow.scoville,
+    };
+
+    const { error } = await supabase
+      .from('planting_info')
+      .update(updates)
+      .eq('id', newRow.id);
+
+    if (error) {
+      console.error('Error updating row:', error);
+      throw error;
+    }
+
+    return newRow;
+  };
 
   return (
-    <div style={{ height: '100%', width: '100%', padding: '1rem' }}>
+    <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
+      <Link
+        href="/"
+        style={{
+          position: 'absolute',
+          left: '1rem',
+          top: '1rem',
+          transform: 'translateY(-50%)',
+          color: '#1d4ed8',
+          fontWeight: 'bold',
+          textDecoration: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.textDecoration = 'underline';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.textDecoration = 'none';
+        }}
+      >
+        ← Back to Dashboard
+      </Link>
         <h1 className="text-4xl font-bold text-green-800 text-center mb-6 tracking-wide">
             🌻 Seed Planting Information
         </h1>
@@ -91,6 +135,10 @@ export default function InfoPage() {
             columns={columns}
             loading={loading}
             getRowId={(row) => row.id}
+            processRowUpdate={handleRowUpdate}
+            onProcessRowUpdateError={(error) => {
+              console.error('Row update error:', error);
+            }}
             pageSizeOptions={[10, 25, 50]}
         />
         </div>

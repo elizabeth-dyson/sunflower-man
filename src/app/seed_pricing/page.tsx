@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { supabase } from '@/lib/supabaseClient';
 import { Box } from '@mui/material';
+import Link from 'next/link';
 
 
 interface SeedPricing {
@@ -69,16 +70,59 @@ export default function PricingPage() {
     { field: 'test_profit', headerName: 'Test Profit', width: 130, sortable: true, editable: false },
   ];
 
-    const [searchText, setSearchText] = useState('');
-    const filteredPrices = prices.filter(
-    (price) =>
-        price.category?.toLowerCase().includes(searchText.toLowerCase()) ||
-        price.type?.toLowerCase().includes(searchText.toLowerCase()) ||
-        price.color?.toLowerCase().includes(searchText.toLowerCase())
-    );
+  const [searchText, setSearchText] = useState('');
+  const filteredPrices = prices.filter(
+  (price) =>
+    price.category?.toLowerCase().includes(searchText.toLowerCase()) ||
+    price.type?.toLowerCase().includes(searchText.toLowerCase()) ||
+    price.color?.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleRowUpdate = async (newRow: any) => {
+    const updates = {
+      seed_cost: newRow.seed_cost,
+      bag_cost: newRow.bag_cost,
+      envelope_cost: newRow.envelope_cost,
+      retail_price: newRow.retail_price,
+      postage: newRow.postage,
+      test_price: newRow.test_price,
+    };
+
+    const { error } = await supabase
+      .from('costs_and_pricing')
+      .update(updates)
+      .eq('id', newRow.id);
+
+    if (error) {
+      console.error('Error updating row:', error);
+      throw error;
+    }
+
+    return newRow;
+  };
 
   return (
-    <div style={{ height: '100%', width: '100%', padding: '1rem' }}>
+    <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
+      <Link
+        href="/"
+        style={{
+          position: 'absolute',
+          left: '1rem',
+          top: '1rem',
+          transform: 'translateY(-50%)',
+          color: '#1d4ed8',
+          fontWeight: 'bold',
+          textDecoration: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.textDecoration = 'underline';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.textDecoration = 'none';
+        }}
+      >
+        ← Back to Dashboard
+      </Link>
         <h1 className="text-4xl font-bold text-green-800 text-center mb-6 tracking-wide">
             🌻 Seed Costs & Prices
         </h1>
@@ -109,6 +153,10 @@ export default function PricingPage() {
             columns={columns}
             loading={loading}
             getRowId={(row) => row.id}
+            processRowUpdate={handleRowUpdate}
+            onProcessRowUpdateError={(error) => {
+              console.error('Row update error:', error);
+            }}
             pageSizeOptions={[10, 25, 50]}
         />
         </div>
