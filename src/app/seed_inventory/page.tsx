@@ -49,10 +49,38 @@ export default function InventoryPage() {
     { field: 'amount_per_packet', headerName: 'Amount per Packet', width: 150, sortable: true, editable: true },
     { field: 'unit', headerName: 'Unit', width: 130, sortable: true, editable: true },
     { field: 'number_packets', headerName: 'Number of Packets', width: 150, sortable: true, editable: true },
-    { field: 'date_received', headerName: 'Date Received', width: 180, sortable: true, editable: true },
+    { field: 'date_received', headerName: 'Date Received', width: 180, sortable: true, editable: true,
+      renderCell: (params) => {
+        const date = new Date(params.value);
+        return date.toLocaleDateString();
+      },
+    },
     { field: 'shelf_life_years', headerName: 'Shelf Life (Years)', width: 130, sortable: true, editable: true },
-    { field: 'expiration_date', headerName: 'Expiration Date', width: 130, sortable: true, editable: false },
-    { field: 'buy_more', headerName: 'Buy More? (T/F)', width: 130, sortable: true, editable: true },
+    { field: 'expiration_date', headerName: 'Expiration Date', width: 130, sortable: true, editable: false,
+      renderCell: (params) => {
+        const date = new Date(params.value);
+        return date.toLocaleDateString();
+      },
+    },
+    { field: 'buy_more', headerName: 'Buy More? (T/F)', width: 130, sortable: true, editable: true,
+      renderCell: (params) => (
+        <input type="checkbox" checked={params.value} disabled />
+      ),
+      renderEditCell: (params) => (
+        <input
+          type="checkbox"
+          checked={params.value}
+          onChange={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.checked,
+            });
+          }}
+          autoFocus
+        />
+      ),
+    },
     { field: 'notes', headerName: 'Notes', width: 100, sortable: true, editable: true },
   ];
 

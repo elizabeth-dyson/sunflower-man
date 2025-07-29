@@ -63,7 +63,11 @@ export default function SeedsPage() {
   (seed) =>
     seed.type?.toLowerCase().includes(searchText.toLowerCase()) ||
     seed.category?.toLowerCase().includes(searchText.toLowerCase()) ||
-    seed.botanical_name?.toLowerCase().includes(searchText.toLowerCase())
+    seed.botanical_name?.toLowerCase().includes(searchText.toLowerCase()) ||
+    seed.type_broad?.toLowerCase().includes(searchText.toLowerCase()) ||
+    seed.source?.toLowerCase().includes(searchText.toLowerCase()) ||
+    seed.sunlight?.toLowerCase().includes(searchText.toLowerCase()) ||
+    seed.color?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleRowUpdate = async (newRow: SeedType) => {

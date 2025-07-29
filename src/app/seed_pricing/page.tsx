@@ -56,8 +56,44 @@ export default function PricingPage() {
     { field: 'color', headerName: 'Color', width: 130, sortable: true, editable: false },
     { field: 'seeds_per_envelope', headerName: 'Seeds per Bag/Envelope', width: 130, sortable: true, editable: false },
     { field: 'seed_cost', headerName: 'Seed Cost', width: 150, sortable: true, editable: true },
-    { field: 'bag_cost', headerName: 'Bag?', width: 130, sortable: true, editable: true },
-    { field: 'envelope_cost', headerName: 'Envelope?', width: 150, sortable: true, editable: true },
+    { field: 'bag_cost', headerName: 'Bag?', width: 130, sortable: true, editable: true,
+      renderCell: (params) => (
+        <input type="checkbox" checked={params.value} disabled />
+      ),
+      renderEditCell: (params) => (
+        <input
+          type="checkbox"
+          checked={params.value}
+          onChange={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.checked,
+            });
+          }}
+          autoFocus
+        />
+      ),
+    },
+    { field: 'envelope_cost', headerName: 'Envelope?', width: 150, sortable: true, editable: true,
+      renderCell: (params) => (
+        <input type="checkbox" checked={params.value} disabled />
+      ),
+      renderEditCell: (params) => (
+        <input
+          type="checkbox"
+          checked={params.value}
+          onChange={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.checked,
+            });
+          }}
+          autoFocus
+        />
+      ),
+    },
     { field: 'total_cost', headerName: 'Total Cost', width: 180, sortable: true, editable: false },
     { field: 'retail_price', headerName: 'Retail Price', width: 130, sortable: true, editable: true },
     { field: 'postage', headerName: 'Postage', width: 130, sortable: true, editable: true },
