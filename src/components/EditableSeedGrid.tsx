@@ -40,7 +40,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
   const [searchText, setSearchText] = useState('');
 
   const renderCategoryEditInputCell = (
-    params: GridRenderEditCellParams<any, string>
+    params: GridRenderEditCellParams<SeedType, string>
   ) => {
     // @ts-expect-error MUI valueOptions typing is borked
     const options = params.colDef.valueOptions as string[];
