@@ -12,6 +12,7 @@ interface SeedType {
   type: string;
   name: string;
   botanical_name: string;
+  is_active: boolean;
   source: string;
   sunlight: string;
   image_url: string;
@@ -71,6 +72,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       type: newRow.type,
       name: newRow.name,
       botanical_name: newRow.botanical_name,
+      is_active: newRow.is_active,
       source: newRow.source,
       sunlight: newRow.sunlight,
       image_url: newRow.image_url,
@@ -135,6 +137,29 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
     } as GridColDef<SeedType, string>,
     { field: 'botanical_name', headerName: 'Botanical Name', width: 180, editable: true },
     { field: 'color', headerName: 'Color', width: 100, editable: true },
+    {
+      field: 'is_active',
+      headerName: 'Active?',
+      width: 100,
+      editable: true,
+      renderCell: (params) => (
+        <input type="checkbox" checked={params.value} disabled />
+      ),
+      renderEditCell: (params) => (
+        <input
+          type="checkbox"
+          checked={params.value}
+          onChange={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.checked,
+            });
+          }}
+          autoFocus
+        />
+      ),
+    },
     {
       field: 'source',
       headerName: 'Source',
