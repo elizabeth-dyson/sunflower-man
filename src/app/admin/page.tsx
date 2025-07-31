@@ -6,11 +6,11 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import type { Metadata } from "next";
 
-export default function AdminDashboard() {
-  const metadata: Metadata = {
-    title: "Seed Types | Admin",
-  };
+export const metadata: Metadata = {
+  title: 'Admin Dashboard',
+};
 
+export default function AdminDashboard() {
   const pages = [
     { name: 'Seed Types', path: '/admin/seed_types' },
     { name: 'Seed Inventory', path: '/admin/seed_inventory' },
