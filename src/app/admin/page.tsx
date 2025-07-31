@@ -1,15 +1,33 @@
-// app/page.tsx
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useSession } from '@supabase/auth-helpers-react';
+import { useEffect } from 'react';
 import Link from 'next/link';
+import type { Metadata } from "next";
 
 export default function AdminDashboard() {
+  const metadata: Metadata = {
+    title: "Seed Types | Admin",
+  };
+
   const pages = [
-    { name: 'Seed Types', path: '/seed_types' },
-    { name: 'Seed Inventory', path: '/seed_inventory' },
-    { name: 'Seed Planting Information', path: '/seed_info' },
-    { name: 'Seed Costs & Prices', path: '/seed_pricing' },
+    { name: 'Seed Types', path: '/admin/seed_types' },
+    { name: 'Seed Inventory', path: '/admin/seed_inventory' },
+    { name: 'Seed Planting Information', path: '/admin/seed_info' },
+    { name: 'Seed Costs & Prices', path: '/admin/seed_pricing' },
   ];
+
+  const router = useRouter();
+  const session = useSession();
+
+  useEffect(() => {
+    if (!session) {
+      router.push('/login');
+    }
+  }, [session]);
+
+  if (!session) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
