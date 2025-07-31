@@ -10,12 +10,18 @@ interface SeedType {
   sku: string;
   category: string;
   type: string;
-  type_broad: string;
+  name: string;
   botanical_name: string;
   source: string;
   sunlight: string;
   image_url: string;
   color: string;
+  plant_depth: string;
+  plant_spacing: string;
+  days_to_germinate: number;
+  plant_height: string;
+  days_to_bloom: number;
+  scoville: number;
 }
 
 export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedType[] }) {
@@ -28,12 +34,18 @@ export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedT
     const updates = {
       category: newRow.category,
       type: newRow.type,
-      type_broad: newRow.type_broad,
+      name: newRow.name,
       botanical_name: newRow.botanical_name,
       source: newRow.source,
       sunlight: newRow.sunlight,
       image_url: newRow.image_url,
       color: newRow.color,
+      plant_depth: newRow.plant_depth,
+      plant_spacing: newRow.plant_spacing,
+      days_to_germinate: newRow.days_to_germinate,
+      plant_height: newRow.plant_height,
+      days_to_bloom: newRow.days_to_bloom,
+      scoville: newRow.scoville,
     };
 
     const { error } = await supabase
@@ -59,8 +71,9 @@ export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedT
     { field: 'sku', headerName: 'SKU', width: 130, editable: false },
     { field: 'category', headerName: 'Category', width: 150, editable: true },
     { field: 'type', headerName: 'Type', width: 130, editable: true },
-    { field: 'type_broad', headerName: 'Type (Broad)', width: 150, editable: true },
+    { field: 'name', headerName: 'Name', width: 150, editable: true },
     { field: 'botanical_name', headerName: 'Botanical Name', width: 180, editable: true },
+    { field: 'color', headerName: 'Color', width: 100, editable: true },
     { field: 'source', headerName: 'Source', width: 130, editable: true },
     { field: 'sunlight', headerName: 'Sunlight', width: 130, editable: true },
     {
@@ -71,11 +84,16 @@ export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedT
       renderCell: (params) =>
         params.value ? <img src={params.value} alt="seed" style={{ height: 40 }} /> : 'N/A',
     },
-    { field: 'color', headerName: 'Color', width: 100, editable: true },
+    { field: 'plant_depth', headerName: 'Plant Depth', width: 150, editable: true },
+    { field: 'plant_spacing', headerName: 'Plant Spacing', width: 130, editable: true },
+    { field: 'days_to_germinate', headerName: 'Days to Germinate', width: 150, editable: true },
+    { field: 'plant_height', headerName: 'Plant Height', width: 180, editable: true },
+    { field: 'days_to_bloom', headerName: 'Days to Bloom', width: 130, editable: true },
+    { field: 'scoville', headerName: 'Scoville', width: 130, editable: true },
   ];
 
   const filteredSeeds = seeds.filter((seed) =>
-    [seed.type, seed.category, seed.botanical_name, seed.type_broad, seed.source, seed.sunlight, seed.color]
+    [seed.type, seed.category, seed.botanical_name, seed.name, seed.source, seed.sunlight, seed.color, seed.plant_depth, seed.plant_spacing, seed.plant_height]
       .some((field) => field?.toLowerCase().includes(searchText.toLowerCase()))
   );
 

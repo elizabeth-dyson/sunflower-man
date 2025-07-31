@@ -9,7 +9,6 @@ export default function AdminDashboard() {
   const pages = [
     { name: 'Seed Types', path: '/admin/seed_types' },
     { name: 'Seed Inventory', path: '/admin/seed_inventory' },
-    { name: 'Seed Planting Information', path: '/admin/seed_info' },
     { name: 'Seed Costs & Prices', path: '/admin/seed_pricing' },
   ];
 
