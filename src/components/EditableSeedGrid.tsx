@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
 import { createClient } from '@/lib/supabaseClient';
 
@@ -24,11 +24,46 @@ interface SeedType {
   scoville: number;
 }
 
-export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedType[] }) {
+type Props = {
+  initialSeeds: SeedType[];
+  categoryOptions: string[];
+  typeOptions: string[];
+  nameOptions: string[];
+  sourceOptions: string[];
+  sunlightOptions: string[];
+};
+
+export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOptions, nameOptions, sourceOptions, sunlightOptions }: Props) {
   const supabase = createClient();
 
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
   const [searchText, setSearchText] = useState('');
+
+  const renderCategoryEditInputCell = (
+    params: GridRenderEditCellParams<any, string>
+  ) => {
+    // @ts-expect-error MUI valueOptions typing is borked
+    const options = params.colDef.valueOptions as string[];
+
+    return (
+      <select
+        value={params.value ?? ''}
+        onChange={(e) =>
+          params.api.setEditCellValue(
+            { id: params.id, field: params.field, value: e.target.value },
+            e
+          )
+        }
+        style={{ width: '100%', height: '100%' }}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    );
+  };
 
   const handleRowUpdate = async (newRow: SeedType) => {
     const updates = {
@@ -54,7 +89,9 @@ export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedT
       .eq('id', newRow.id);
 
     if (error) {
-      console.error('Supabase update error:', error);
+      console.error('🔥 Supabase update error:', error.message, error.details);
+      console.log('🔎 update payload:', updates);
+      console.log('🆔 updating row ID:', newRow.id);
       throw error;
     }
 
@@ -69,13 +106,53 @@ export default function EditableSeedGrid({ initialSeeds }: { initialSeeds: SeedT
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90, editable: false },
     { field: 'sku', headerName: 'SKU', width: 130, editable: false },
-    { field: 'category', headerName: 'Category', width: 150, editable: true },
-    { field: 'type', headerName: 'Type', width: 130, editable: true },
-    { field: 'name', headerName: 'Name', width: 150, editable: true },
+    {
+      field: 'category',
+      headerName: 'Category',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: categoryOptions,
+      renderEditCell: renderCategoryEditInputCell,
+    } as GridColDef<SeedType, string>,
+    {
+      field: 'type',
+      headerName: 'Type',
+      width: 130,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: typeOptions,
+      renderEditCell: renderCategoryEditInputCell,
+    } as GridColDef<SeedType, string>,
+    {
+      field: 'name',
+      headerName: 'Name',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: nameOptions,
+      renderEditCell: renderCategoryEditInputCell,
+    } as GridColDef<SeedType, string>,
     { field: 'botanical_name', headerName: 'Botanical Name', width: 180, editable: true },
     { field: 'color', headerName: 'Color', width: 100, editable: true },
-    { field: 'source', headerName: 'Source', width: 130, editable: true },
-    { field: 'sunlight', headerName: 'Sunlight', width: 130, editable: true },
+    {
+      field: 'source',
+      headerName: 'Source',
+      width: 130,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: sourceOptions,
+      renderEditCell: renderCategoryEditInputCell,
+    } as GridColDef<SeedType, string>,
+    {
+      field: 'sunlight',
+      headerName: 'Sunlight',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: sunlightOptions,
+      renderEditCell: renderCategoryEditInputCell,
+    } as GridColDef<SeedType, string>,
     {
       field: 'image_url',
       headerName: 'Image',
