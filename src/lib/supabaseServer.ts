@@ -9,7 +9,10 @@ export const createServerSupabaseClient = () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
+        get: (name: string) => {
+          const cookie = cookieStore.get(name);
+          return typeof cookie?.value === 'string' ? cookie.value : undefined;
+        },
       },
     }
   );
