@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PricingPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) redirect('/login');
