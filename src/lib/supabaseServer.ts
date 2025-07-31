@@ -11,7 +11,7 @@ export const createServerSupabaseClient = () => {
     {
       cookies: {
         get(name: string) {
-          // @ts-expect-error
+          // @ts-expect-error Your packages are stupid, Supabase.
           return cookieStore.get(name)?.value as string | undefined;
         },
       },
