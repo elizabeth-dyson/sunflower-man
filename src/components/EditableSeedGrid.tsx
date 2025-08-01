@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { DataGrid, GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
-import { Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import { createClient } from '@/lib/supabaseClient';
+import AddSeedDialog from './AddSeedDialog';
+import type { AddSeedForm } from './AddSeedDialog';
+
 
 interface SeedType {
   id: number;
@@ -14,7 +17,7 @@ interface SeedType {
   botanical_name: string;
   is_active: boolean;
   source: string;
-  sunlight: string;
+  sunlight: string | null;
   image_url: string;
   color: string;
   plant_depth: string;
@@ -39,6 +42,8 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
 
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
   const [searchText, setSearchText] = useState('');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
 
   const renderCategoryEditInputCell = (
     params: GridRenderEditCellParams<SeedType, string>
@@ -104,6 +109,80 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
 
     return { ...newRow, ...updates };
   };
+
+  const handleAddSeed = async (form: AddSeedForm) => {
+    const { data: seed, error: seedError } = await supabase
+      .from('seeds')
+      .insert([
+        {
+          name: form.name,
+          type: form.type,
+          category: form.category,
+          botanical_name: form.botanical_name,
+          source: form.source,
+          image_url: '',
+          color: form.color,
+          is_active: form.is_active,
+          sunlight: null,
+          plant_depth: '',
+          plant_spacing: '',
+          plant_height: '',
+          days_to_germinate: 0,
+          days_to_bloom: 0,
+          scoville: 0,
+        },
+      ])
+      .select()
+      .single();
+
+    if (seedError || !seed) {
+      console.error('❌ Seeds insert failed:', seedError?.message);
+      return;
+    }
+
+    // ✅ Insert inventory
+    const { data: inventoryData, error: inventoryError } = await supabase
+      .from('inventory')
+      .insert([
+        {
+          seed_id: seed.id,
+          date_received: form.date_received,
+        },
+      ])
+      .select()
+      .single();
+
+    if (inventoryError || !inventoryData) {
+      console.error('❌ Inventory insert failed:', inventoryError?.message);
+      return;
+    }
+
+    // ✅ Insert pricing
+    const { error: pricingError } = await supabase
+      .from('costs_and_pricing')
+      .insert([
+        {
+          seed_id: seed.id,
+          inventory_id: inventoryData.id,
+          seed_cost: 0,
+          bag_cost: false,
+          envelope_cost: true,
+          postage: 0.73,
+        },
+      ])
+      .select()
+      .single();
+
+    if (pricingError) {
+      console.error('❌ Pricing insert failed:', pricingError.message);
+      return;
+    }
+
+    // ✅ Update UI
+    setSeeds((prev) => [...prev, seed]);
+  };
+
+
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90, editable: false },
@@ -216,6 +295,27 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
           }}
         />
       </Box>
+
+      <Box display="flex" justifyContent="center" mb={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setIsAddOpen(true)}
+        >
+          ➕ Add New Seed
+        </Button>
+      </Box>
+
+
+      <AddSeedDialog
+        open={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        onSubmit={handleAddSeed}
+        categoryOptions={categoryOptions}
+        typeOptions={typeOptions}
+        nameOptions={nameOptions}
+        sourceOptions={sourceOptions}
+      />
 
       <div style={{ height: '80vh', width: '100%' }}>
         <DataGrid
