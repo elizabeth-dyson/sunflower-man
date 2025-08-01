@@ -32,7 +32,7 @@ type Props = {
   initialSeeds: SeedType[];
   categoryOptions: string[];
   typeOptions: string[];
-  nameOptions: string[];
+  nameOptions: { name: string; category: string }[];
   sourceOptions: string[];
   sunlightOptions: string[];
 };
@@ -211,7 +211,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: nameOptions,
+      valueOptions: nameOptions[0],
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     { field: 'botanical_name', headerName: 'Botanical Name', width: 180, editable: true },

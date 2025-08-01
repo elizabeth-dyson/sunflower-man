@@ -9,7 +9,7 @@ import {
   FormControlLabel,
   Checkbox
 } from '@mui/material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -40,7 +40,7 @@ export default function AddSeedDialog({
   onSubmit: (values: AddSeedForm) => void;
   categoryOptions: string[];
   typeOptions: string[];
-  nameOptions: string[];
+  nameOptions: { name: string; category: string }[];
   sourceOptions: string[];
 }) {
   const initialForm: AddSeedForm = {
@@ -55,9 +55,36 @@ export default function AddSeedDialog({
   };
 
   const [form, setForm] = useState<AddSeedForm>(initialForm);
+  const [filteredNameOptions, setFilteredNameOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (form.category) {
+      const filtered = nameOptions
+        .filter((n) => n.category === form.category)
+        .map((n) => n.name);
+
+      setFilteredNameOptions(filtered);
+    }
+  }, [form.category, nameOptions]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    // Update form
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'category' ? { name: '' } : {}) // clear name if category changed
+    }));
+
+    // If category changed, filter names
+    if (name === 'category') {
+      const filtered = nameOptions
+        .filter((n) => n.category === value)
+        .map((n) => n.name);
+      setFilteredNameOptions(filtered);
+    }
   };
 
   const handleSubmit = () => {
@@ -119,7 +146,7 @@ export default function AddSeedDialog({
           error={!form.name}
           helperText={!form.name ? 'Name is required' : ''}
         >
-          {nameOptions.map((nam) => (
+          {filteredNameOptions.map((nam) => (
             <MenuItem key={nam} value={nam}>
               {nam}
             </MenuItem>
