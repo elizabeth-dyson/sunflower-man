@@ -18,6 +18,7 @@ interface SeedInventory {
   notes: string;
   category: string;
   type: string;
+  name: string;
   color: string;
 }
 
@@ -36,6 +37,7 @@ export default function EditableInventoryGrid({
       inv.unit,
       inv.category,
       inv.type,
+      inv.name,
       inv.color,
     ]
       .join(' ')
@@ -76,6 +78,7 @@ export default function EditableInventoryGrid({
     { field: 'seed_id', headerName: 'Seed ID', width: 130, editable: false },
     { field: 'category', headerName: 'Category', width: 130, editable: false },
     { field: 'type', headerName: 'Type', width: 130, editable: false },
+    { field: 'name', headerName: 'Name', width: 130, editable: false },
     { field: 'color', headerName: 'Color', width: 130, editable: false },
     { field: 'amount_per_packet', headerName: 'Amount per Packet', width: 150, editable: true },
     { field: 'unit', headerName: 'Unit', width: 130, editable: true },

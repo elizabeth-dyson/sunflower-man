@@ -25,6 +25,7 @@ interface SeedPricing {
   test_fee: number;
   category: string;
   type: string;
+  name: string;
   color: string;
 }
 
@@ -38,7 +39,7 @@ export default function EditableSeedPricingGrid({
   const [searchText, setSearchText] = useState('');
 
   const filteredPrices = prices.filter((price) =>
-    [price.category, price.type, price.color]
+    [price.category, price.type, price.name, price.color]
       .join(' ')
       .toLowerCase()
       .includes(searchText.toLowerCase())
@@ -77,6 +78,7 @@ export default function EditableSeedPricingGrid({
     { field: 'inventory_id', headerName: 'Inventory ID', width: 130, editable: false },
     { field: 'category', headerName: 'Category', width: 130, editable: false },
     { field: 'type', headerName: 'Type', width: 130, editable: false },
+    { field: 'name', headerName: 'Name', width: 130, editable: false},
     { field: 'color', headerName: 'Color', width: 130, editable: false },
     { field: 'seeds_per_envelope', headerName: 'Seeds/Envelope', width: 150, editable: false },
     { field: 'seed_cost', headerName: 'Seed Cost', width: 130, editable: true },

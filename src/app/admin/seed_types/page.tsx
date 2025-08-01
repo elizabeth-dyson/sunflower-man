@@ -42,14 +42,12 @@ export default async function SeedsPage() {
 
   const { data: nameOptions, error: nameError } = await supabase
     .from('seeds_name_options') // your category table
-    .select('name');
+    .select('name,category');
 
   if (nameError || !nameOptions) {
     console.log('Error message: ', nameError)
     throw new Error('Failed to load names');
   } 
-
-  const names = nameOptions.map(c => c.name);
 
   const { data: sourceOptions, error: sourceError } = await supabase
     .from('seeds_source_options') // your category table
@@ -81,7 +79,7 @@ export default async function SeedsPage() {
         🌻 Seed Types
       </h1>
 
-      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={names} sourceOptions={sources} sunlightOptions={sunlights} />
+      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={nameOptions} sourceOptions={sources} sunlightOptions={sunlights} />
     </div>
   );
 }
