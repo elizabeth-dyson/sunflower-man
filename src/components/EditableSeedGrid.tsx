@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { DataGrid, GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
-import { Box, Button } from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { createClient } from '@/lib/supabaseClient';
 import AddSeedDialog from './AddSeedDialog';
 import type { AddSeedForm } from './AddSeedDialog';
@@ -271,12 +271,52 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
     { field: 'plant_height', headerName: 'Plant Height', width: 180, editable: true },
     { field: 'days_to_bloom', headerName: 'Days to Bloom', width: 130, editable: true },
     { field: 'scoville', headerName: 'Scoville', width: 130, editable: true },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      renderCell: (params) => (
+        <Button color="error" onClick={() => handleConfirmDelete(params.row.id)}>
+          Delete
+        </Button>
+      ),
+      sortable: false,
+      filterable: false,
+      width: 100,
+    },
   ];
 
   const filteredSeeds = seeds.filter((seed) =>
     [seed.type, seed.category, seed.botanical_name, seed.name, seed.source, seed.sunlight, seed.color, seed.plant_depth, seed.plant_spacing, seed.plant_height]
       .some((field) => field?.toLowerCase().includes(searchText.toLowerCase()))
   );
+
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleConfirmDelete = (id: number) => {
+    setDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    const { error } = await supabase
+      .from('seeds')
+      .delete()
+      .eq('id', deleteId);
+
+    if (error) {
+      console.error('❌ Delete failed:', error.message);
+      alert('Delete failed: ' + error.message);
+    } else {
+      setSeeds((prev) => prev.filter((s) => s.id !== deleteId));
+    }
+
+    setDeleteId(null);
+    setConfirmOpen(false);
+  };
+
 
   return (
     <>
@@ -316,6 +356,17 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
         nameOptions={nameOptions}
         sourceOptions={sourceOptions}
       />
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this seed? This will also delete related inventory and pricing.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDelete} color="error">Delete</Button>
+        </DialogActions>
+      </Dialog>
 
       <div style={{ height: '80vh', width: '100%' }}>
         <DataGrid
