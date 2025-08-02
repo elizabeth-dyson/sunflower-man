@@ -645,7 +645,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
                             const fileExt = file.name.split('.').pop();
                             const filePath = `seeds/${Date.now()}.${fileExt}`;
 
-                            const { data, error } = await supabase.storage
+                            const { error } = await supabase.storage
                               .from('seed-images') // 🔁 Replace with your actual bucket name
                               .upload(filePath, file);
 
