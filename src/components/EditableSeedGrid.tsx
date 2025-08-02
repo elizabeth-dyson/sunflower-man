@@ -163,12 +163,23 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       throw error;
     }
 
-    const updated = seeds.map((seed) =>
-      seed.id === newRow.id ? { ...seed, ...updates } : seed
-    );
-    setSeeds(updated);
+    const { data: updatedRow, error: fetchError } = await supabase
+      .from('seeds')
+      .select('*')
+      .eq('id', newRow.id)
+      .single();
 
-    return { ...newRow, ...updates };
+    if (fetchError || !updatedRow) {
+      console.error('❌ Re-fetch failed:', fetchError?.message);
+      return newRow; // fallback to original
+    }
+
+    // ✅ Update local state with fresh DB copy
+    setSeeds((prev) =>
+      prev.map((s) => (s.id === updatedRow.id ? updatedRow : s))
+    );
+
+    return updatedRow;
   };
 
   const handleAddSeed = async (form: AddSeedForm) => {
@@ -239,8 +250,18 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       return;
     }
 
-    // ✅ Update UI
-    setSeeds((prev) => [...prev, seed]);
+    const { data: updatedRow, error: fetchError } = await supabase
+      .from('seeds')
+      .select('*')
+      .eq('id', seed.id)
+      .single();
+
+    if (fetchError || !updatedRow) {
+      console.error('❌ Re-fetch failed:', fetchError?.message);
+      setSeeds((prev) => [...prev, seed]);
+    } else {
+      setSeeds((prev) => [...prev, updatedRow]);
+    }
   };
 
 
