@@ -2,31 +2,46 @@
 
 import { useState } from 'react';
 import { DataGrid, GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { createClient } from '@/lib/supabaseClient';
 import AddSeedDialog from './AddSeedDialog';
 import type { AddSeedForm } from './AddSeedDialog';
+import {
+  Grid,
+  Card,
+  CardMedia,
+  CardContent,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+  Box,
+  Button,
+  MenuItem
+} from '@mui/material';
 
 
-interface SeedType {
+type SeedType = {
   id: number;
-  sku: string;
-  category: string;
-  type: string;
   name: string;
+  type: string;
+  category: string;
   botanical_name: string;
+  color: string;
   is_active: boolean;
   source: string;
+  image_url: string | null;
   sunlight: string | null;
-  image_url: string;
-  color: string;
-  plant_depth: string;
-  plant_spacing: string;
+  plant_depth: string | null;
+  plant_spacing: string | null;
+  plant_height: string | null;
   days_to_germinate: number;
-  plant_height: string;
   days_to_bloom: number;
   scoville: number;
-}
+};
 
 type Props = {
   initialSeeds: SeedType[];
@@ -43,6 +58,52 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
   const [searchText, setSearchText] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  const [galleryMode, setGalleryMode] = useState(true);
+  const [selectedSeed, setSelectedSeed] = useState<SeedType | null>(null);
+  const [editForm, setEditForm] = useState<Partial<SeedType> | null>(null);
+
+  const openSeedModal = (seed: SeedType) => {
+    setSelectedSeed(seed);
+    setEditForm({ ...seed });
+  };
+
+  const handleEditFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editForm) return;
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const handleModalSave = async () => {
+    if (!editForm || !editForm.id) return;
+    const { error } = await supabase
+      .from('seeds')
+      .update(editForm)
+      .eq('id', editForm.id);
+
+    if (!error) {
+      setSeeds((prev) =>
+        prev.map((s) => (s.id === editForm.id ? { ...s, ...editForm } : s))
+      );
+    }
+
+    setSelectedSeed(null);
+    setEditForm(null);
+  };
+
+  const handleModalDelete = async () => {
+    if (!selectedSeed) return;
+    const confirmDelete = confirm(
+      'This will delete the seed and cascade to inventory and pricing. Are you sure?'
+    );
+    if (!confirmDelete) return;
+
+    const { error } = await supabase.from('seeds').delete().eq('id', selectedSeed.id);
+    if (!error) {
+      setSeeds((prev) => prev.filter((s) => s.id !== selectedSeed.id));
+      setSelectedSeed(null);
+      setEditForm(null);
+    }
+  };
 
 
   const renderCategoryEditInputCell = (
@@ -320,7 +381,8 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
 
   return (
     <>
-      <Box display="flex" justifyContent="center" mb={2}>
+      {/* Search + Toggle */}
+      <Box display="flex" justifyContent="center" mb={2} gap={2}>
         <input
           type="text"
           placeholder="Search seeds..."
@@ -334,19 +396,19 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
             border: '1px solid #ccc',
           }}
         />
+        <Button variant="outlined" onClick={() => setGalleryMode(!galleryMode)}>
+          {galleryMode ? 'Switch to Table View' : 'Switch to Gallery View'}
+        </Button>
       </Box>
 
+      {/* Add Button */}
       <Box display="flex" justifyContent="center" mb={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setIsAddOpen(true)}
-        >
+        <Button variant="contained" color="primary" onClick={() => setIsAddOpen(true)}>
           ➕ Add New Seed
         </Button>
       </Box>
 
-
+      {/* Add Dialog */}
       <AddSeedDialog
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
@@ -357,6 +419,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
         sourceOptions={sourceOptions}
       />
 
+      {/* Delete Confirm */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
@@ -364,20 +427,282 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleDelete} color="error">Delete</Button>
+          <Button onClick={handleDelete} color="error">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <div style={{ height: '80vh', width: '100%' }}>
-        <DataGrid
-          rows={filteredSeeds}
-          columns={columns}
-          getRowId={(row) => row.id}
-          processRowUpdate={handleRowUpdate}
-          onProcessRowUpdateError={(err) => console.error(err)}
-          disableRowSelectionOnClick
-        />
-      </div>
+      {/* Gallery View */}
+      {galleryMode ? (
+        <Grid container spacing={2}>
+          {filteredSeeds.map((seed) => (
+            // @ts-expect-error MUI types are wrong here
+            <Grid 
+              item xs={12} 
+              sm={6} md={4} 
+              lg={3} 
+              key={seed.id} 
+            >
+              <Card onClick={() => openSeedModal(seed)} sx={{ cursor: 'pointer' }}>
+                <CardMedia
+                  component="img"
+                  image={seed.image_url || '/placeholder.png'}
+                  alt={seed.name}
+                  sx={{
+                    width: '100%',
+                    height: 140,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.png';
+                  }}
+                />
+                <CardContent>
+                  <Typography variant="h6">{seed.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {seed.category} / {seed.type}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        // Table View
+        <div style={{ height: '80vh', width: '100%' }}>
+          <DataGrid
+            rows={filteredSeeds}
+            columns={columns}
+            getRowId={(row) => row.id}
+            processRowUpdate={handleRowUpdate}
+            onProcessRowUpdateError={(err) => console.error(err)}
+            disableRowSelectionOnClick
+          />
+        </div>
+      )}
+
+      {/* Seed Modal */}
+      <Dialog open={!!selectedSeed} onClose={() => setSelectedSeed(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editForm?.name} Details</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {editForm &&
+            Object.entries(editForm).map(([key, value]) => (
+              (() => {
+                if (key === 'id' || key === 'sku') {
+                  return (
+                    <TextField
+                      key={key}
+                      name={key}
+                      label={key.toUpperCase()}
+                      value={value ?? ''}
+                      slotProps={{
+                        input: { disabled: true },
+                      }}
+                      fullWidth
+                    />
+                  );
+                }
+
+                if (key === 'category') {
+                  return (
+                    <TextField
+                      select
+                      key={key}
+                      name={key}
+                      label="Category"
+                      value={value ?? ''}
+                      onChange={ handleEditFieldChange }
+                      fullWidth
+                    >
+                      {categoryOptions.map((opt) => (
+                        <MenuItem key={opt} value={opt}>
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  );
+                }
+
+                if (key === 'type') {
+                  return (
+                    <TextField
+                      select
+                      key={key}
+                      name={key}
+                      label="Type"
+                      value={value ?? ''}
+                      onChange={ handleEditFieldChange }
+                      fullWidth
+                    >
+                      {typeOptions.map((opt) => (
+                        <MenuItem key={opt} value={opt}>
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  );
+                }
+
+                if (key === 'name') {
+                  return (
+                    <TextField
+                      select
+                      key={key}
+                      name={key}
+                      label={'Name'}
+                      value={value ?? ''}
+                      onChange={handleEditFieldChange}
+                      fullWidth
+                    >
+                      {nameOptions.map((opt) => (
+                        <MenuItem key={opt.name} value={opt.name}>
+                          {opt.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  );
+                }
+
+                if (key === 'source') {
+                  return (
+                    <TextField
+                      select
+                      key={key}
+                      name={key}
+                      label={'Source'}
+                      value={value ?? ''}
+                      onChange={handleEditFieldChange}
+                      fullWidth
+                    >
+                      {sourceOptions.map((opt) => (
+                        <MenuItem key={opt} value={opt}>
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  );
+                }
+
+                if (key === 'sunlight') {
+                  return (
+                    <TextField
+                      select
+                      key={key}
+                      name={key}
+                      label={'Sunlight'}
+                      value={value ?? ''}
+                      onChange={handleEditFieldChange}
+                      fullWidth
+                    >
+                      {sunlightOptions.map((opt) => (
+                        <MenuItem key={opt} value={opt}>
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  );
+                }
+
+                if (key === 'is_active') {
+                  return (
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={Boolean(value)}
+                          onChange={(e) =>
+                            handleEditFieldChange({
+                              target: {
+                                name: key,
+                                value: e.target.checked,
+                              },
+                            } as unknown as React.ChangeEvent<HTMLInputElement>)
+                          }
+                        />
+                      }
+                      label="Active?"
+                    />
+                  );
+                }
+
+                if (key === 'image_url') {
+                  return (
+                    <div>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                      >
+                        Upload Image
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            const fileExt = file.name.split('.').pop();
+                            const filePath = `seeds/${Date.now()}.${fileExt}`;
+
+                            const { error } = await supabase.storage
+                              .from('seed-images') // 🔁 Replace with your actual bucket name
+                              .upload(filePath, file);
+
+                            if (error) {
+                              console.error('Image upload error:', error.message);
+                              return;
+                            }
+
+                            const { data: publicUrlData } = supabase
+                              .storage
+                              .from('seed-images')
+                              .getPublicUrl(filePath);
+
+                            const publicUrl = publicUrlData?.publicUrl;
+
+                            if (publicUrl) {
+                              handleEditFieldChange({
+                                target: {
+                                  name: key,
+                                  value: publicUrl,
+                                },
+                              } as unknown as React.ChangeEvent<HTMLInputElement>);
+                            }
+                          }}
+                        />
+                      </Button>
+
+                      {value && typeof value === 'string' && (
+                        <img
+                          src={value}
+                          alt="Seed"
+                          style={{ marginTop: 8, maxHeight: 100, borderRadius: 4 }}
+                        />
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <TextField
+                    key={key}
+                    name={key}
+                    label={key.replace(/_/g, ' ')}
+                    value={value ?? ''}
+                    onChange={handleEditFieldChange}
+                    fullWidth
+                  />
+                );
+              })()
+            ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleModalDelete} color="error">Delete</Button>
+          <Button onClick={() => setSelectedSeed(null)}>Cancel</Button>
+          <Button onClick={handleModalSave} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
