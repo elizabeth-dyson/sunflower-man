@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DataGrid, GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
 import { createClient } from '@/lib/supabaseClient';
 import AddSeedDialog from './AddSeedDialog';
@@ -62,6 +62,29 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
   const [galleryMode, setGalleryMode] = useState(true);
   const [selectedSeed, setSelectedSeed] = useState<SeedType | null>(null);
   const [editForm, setEditForm] = useState<Partial<SeedType> | null>(null);
+
+  type SeedImage = { id: string; seed_id: number; image_url: string };
+  const [imagesMap, setImagesMap] = useState<Record<number, string[]>>({});
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      const { data, error } = await supabase.from('seed_images').select('*');
+      if (error) {
+        console.error('❌ Failed to fetch seed images:', error.message);
+        return;
+      }
+
+      const map: Record<number, string[]> = {};
+      data.forEach((img: SeedImage) => {
+        if (!map[img.seed_id]) map[img.seed_id] = [];
+        map[img.seed_id].push(img.image_url);
+      });
+
+      setImagesMap(map);
+    };
+
+    fetchImages();
+  }, []);
 
   const openSeedModal = (seed: SeedType) => {
     setSelectedSeed(seed);
@@ -447,7 +470,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
               <Card onClick={() => openSeedModal(seed)} sx={{ cursor: 'pointer' }}>
                 <CardMedia
                   component="img"
-                  image={seed.image_url || '/placeholder.png'}
+                  image={imagesMap[seed.id]?.[0] || '/placeholder.png'}
                   alt={seed.name}
                   sx={{
                     width: '100%',
@@ -629,6 +652,21 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
                 if (key === 'image_url') {
                   return (
                     <div>
+                      {selectedSeed && (
+                        <Box display="flex" flexWrap="wrap" gap={1}>
+                          {(imagesMap[selectedSeed.id] || []).map((imgUrl, idx) => (
+                            <img
+                              key={idx}
+                              src={imgUrl}
+                              style={{
+                                height: 80,
+                                borderRadius: 4,
+                                border: '1px solid #ccc',
+                              }}
+                            />
+                          ))}
+                        </Box>
+                      )}
                       <Button
                         variant="outlined"
                         component="label"
@@ -640,35 +678,43 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
                           accept="image/*"
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
-                            if (!file) return;
+                            if (!file || !selectedSeed) return;
 
                             const fileExt = file.name.split('.').pop();
                             const filePath = `seeds/${Date.now()}.${fileExt}`;
 
-                            const { error } = await supabase.storage
-                              .from('seed-images') // 🔁 Replace with your actual bucket name
+                            const { error: uploadError } = await supabase
+                              .storage
+                              .from('seed-images')
                               .upload(filePath, file);
 
-                            if (error) {
-                              console.error('Image upload error:', error.message);
+                            if (uploadError) {
+                              console.error('❌ Upload failed:', uploadError.message);
                               return;
                             }
 
-                            const { data: publicUrlData } = supabase
+                            const { data: publicData } = supabase
                               .storage
                               .from('seed-images')
                               .getPublicUrl(filePath);
 
-                            const publicUrl = publicUrlData?.publicUrl;
+                            const publicUrl = publicData?.publicUrl;
+                            if (!publicUrl) return;
 
-                            if (publicUrl) {
-                              handleEditFieldChange({
-                                target: {
-                                  name: key,
-                                  value: publicUrl,
-                                },
-                              } as unknown as React.ChangeEvent<HTMLInputElement>);
+                            const { error: insertError } = await supabase
+                              .from('seed_images')
+                              .insert({ seed_id: selectedSeed.id, image_url: publicUrl });
+
+                            if (insertError) {
+                              console.error('❌ Insert failed:', insertError.message);
+                              return;
                             }
+
+                            // Refresh local images
+                            setImagesMap((prev) => ({
+                              ...prev,
+                              [selectedSeed.id]: [...(prev[selectedSeed.id] || []), publicUrl],
+                            }));
                           }}
                         />
                       </Button>
