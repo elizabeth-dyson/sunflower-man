@@ -171,7 +171,7 @@ export default function AddSeedDialog({
 
     console.log('Inserting name:', { name, category, nextCode });
 
-    const { data, error: insertErr } = await supabase
+    const { error: insertErr } = await supabase
       .from('seeds_name_options')
       .insert({ name, category, name_code: nextCode })
       .select()
