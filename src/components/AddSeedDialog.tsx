@@ -160,9 +160,9 @@ export default function AddSeedDialog({
       .eq('category', category)
       .order('name_code', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (maxErr || !maxName) {
+    if (maxErr) {
       alert("Failed to get name_code: " + maxErr?.message);
       return false;
     }
