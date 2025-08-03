@@ -293,7 +293,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: nameOptions[0],
+      valueOptions: nameOptions.map((n) => n.name),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     { field: 'botanical_name', headerName: 'Botanical Name', width: 180, editable: true },
