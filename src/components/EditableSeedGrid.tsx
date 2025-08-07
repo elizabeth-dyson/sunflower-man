@@ -45,14 +45,14 @@ type SeedType = {
 
 type Props = {
   initialSeeds: SeedType[];
-  categoryOptions: string[];
-  typeOptions: string[];
-  nameOptions: { name: string; category: string }[];
-  sourceOptions: string[];
-  sunlightOptions: string[];
+  categoryOptions: { id: number; label: string }[];
+  typeOptions: { id: number; label: string }[];
+  nameOptions: { id: number; label: string; category: string }[];
+  sourceOptions: { id: number; label: string }[];
+  sunlightOptions: { id: number; label: string }[];
 };
 
-export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOptions, nameOptions, sourceOptions, sunlightOptions }: Props) {
+export default function EditableSeedGrid({ initialSeeds, categoryOptions: initialCategoryOptions, typeOptions: initialTypeOptions, nameOptions: initialNameOptions, sourceOptions: initialSourceOptions, sunlightOptions: initialSunlightOptions }: Props) {  
   const supabase = createClient();
 
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
@@ -63,9 +63,109 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
   const [selectedSeed, setSelectedSeed] = useState<SeedType | null>(null);
   const [editForm, setEditForm] = useState<Partial<SeedType> | null>(null);
 
+  const [categoryOptions, setCategoryOptions] = useState(initialCategoryOptions);
+  const [typeOptions, setTypeOptions] = useState(initialTypeOptions);
+  const [nameOptions, setNameOptions] = useState(initialNameOptions);
+  const [sourceOptions, setSourceOptions] = useState(initialSourceOptions);
+  const [sunlightOptions, setSunlightOptions] = useState(initialSunlightOptions);
+
+  const refreshCategoryOptions = async () => {
+    const { data, error } = await supabase
+      .from('seeds_category_options')
+      .select('id, category');
+
+    if (error) {
+      console.error('Failed to refresh categories:', error.message);
+      return;
+    }
+
+    const mapped = data.map((row) => ({
+      id: row.id,
+      label: row.category,
+    }));
+
+    setCategoryOptions(mapped);
+  };
+
+  const refreshTypeOptions = async () => {
+    const { data, error } = await supabase
+      .from('seeds_type_options')
+      .select('id, type');
+
+    if (error) {
+      console.error('Failed to refresh types:', error.message);
+      return;
+    }
+
+    const mapped = data.map((row) => ({
+      id: row.id,
+      label: row.type,
+    }));
+
+    setTypeOptions(mapped);
+  };
+
+  const refreshNameOptions = async () => {
+    const { data, error } = await supabase
+      .from('seeds_name_options')
+      .select('id, name, category');
+
+    if (error) {
+      console.error('Failed to refresh names:', error.message);
+      return;
+    }
+
+    const mapped = data.map((row) => ({
+      id: row.id,
+      label: row.name,
+      category: row.category
+    }));
+
+    setNameOptions(mapped);
+  };
+
+  const refreshSourceOptions = async () => {
+    const { data, error } = await supabase
+      .from('seeds_source_options')
+      .select('id, source');
+
+    if (error) {
+      console.error('Failed to refresh sources:', error.message);
+      return;
+    }
+
+    const mapped = data.map((row) => ({
+      id: row.id,
+      label: row.source,
+    }));
+
+    setSourceOptions(mapped);
+  };
+
+  const refreshSunlightOptions = async () => {
+    const { data, error } = await supabase
+      .from('seeds_sunlight_options')
+      .select('id, sunlight');
+
+    if (error) {
+      console.error('Failed to refresh sunlights:', error.message);
+      return;
+    }
+
+    const mapped = data.map((row) => ({
+      id: row.id,
+      label: row.sunlight,
+    }));
+
+    setSunlightOptions(mapped);
+  };
+
   const openSeedModal = (seed: SeedType) => {
     setSelectedSeed(seed);
-    setEditForm({ ...seed });
+
+    setEditForm({
+      ...seed
+    });
   };
 
   const handleEditFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,14 +175,19 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
 
   const handleModalSave = async () => {
     if (!editForm || !editForm.id) return;
+
+    const updatedForm = {
+      ...editForm
+    };
+
     const { error } = await supabase
       .from('seeds')
-      .update(editForm)
+      .update(updatedForm)
       .eq('id', editForm.id);
 
     if (!error) {
       setSeeds((prev) =>
-        prev.map((s) => (s.id === editForm.id ? { ...s, ...editForm } : s))
+        prev.map((s) => (s.id === editForm.id ? { ...s, ...updatedForm } : s))
       );
     }
 
@@ -192,16 +297,8 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
           category: form.category,
           botanical_name: form.botanical_name,
           source: form.source,
-          image_url: '',
           color: form.color,
           is_active: form.is_active,
-          sunlight: null,
-          plant_depth: '',
-          plant_spacing: '',
-          plant_height: '',
-          days_to_germinate: 0,
-          days_to_bloom: 0,
-          scoville: 0,
         },
       ])
       .select()
@@ -275,7 +372,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: categoryOptions,
+      valueOptions: categoryOptions.map(c => c.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -284,7 +381,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 130,
       editable: true,
       type: 'singleSelect',
-      valueOptions: typeOptions,
+      valueOptions: typeOptions.map(c => c.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -293,7 +390,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: nameOptions.map((n) => n.name),
+      valueOptions: nameOptions.map((n) => n.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     { field: 'botanical_name', headerName: 'Botanical Name', width: 180, editable: true },
@@ -327,7 +424,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 130,
       editable: true,
       type: 'singleSelect',
-      valueOptions: sourceOptions,
+      valueOptions: sourceOptions.map(c => c.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -336,7 +433,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: sunlightOptions,
+      valueOptions: sunlightOptions.map(s => s.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -438,6 +535,10 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
         typeOptions={typeOptions}
         nameOptions={nameOptions}
         sourceOptions={sourceOptions}
+        refreshCategoryOptions={refreshCategoryOptions}
+        refreshTypeOptions={refreshTypeOptions}
+        refreshNameOptions={refreshNameOptions}
+        refreshSourceOptions={refreshSourceOptions}
       />
 
       {/* Delete Confirm */}
@@ -509,205 +610,181 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
         <DialogTitle>{editForm?.name} Details</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {editForm &&
-            Object.entries(editForm).map(([key, value]) => (
-              (() => {
-                if (key === 'id' || key === 'sku') {
-                  return (
-                    <TextField
-                      key={key}
-                      name={key}
-                      label={key.toUpperCase()}
-                      value={value ?? ''}
-                      slotProps={{
-                        input: { disabled: true },
-                      }}
-                      fullWidth
-                    />
-                  );
-                }
+            Object.entries(editForm).map(([key, value]) => {
+              let field: React.ReactNode = null;
 
-                if (key === 'category') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label="Category"
-                      value={value ?? ''}
-                      onChange={ handleEditFieldChange }
-                      fullWidth
-                    >
-                      {categoryOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
+              if (key === 'id' || key === 'sku') {
+                field = (
+                  <TextField
+                    name={key}
+                    label={key.toUpperCase()}
+                    value={value ?? ''}
+                    slotProps={{
+                      input: { disabled: true },
+                    }}
+                    fullWidth
+                  />
+                );
+              } else if (key === 'category') {
+                field = (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Category"
+                    name="category"
+                    value={editForm?.category ?? ''}
+                    onChange={handleEditFieldChange}
+                  >
+                    {categoryOptions.map((opt) => (
+                      <MenuItem key={opt.id} value={opt.label}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                );
+              } else if (key === 'type') {
+                field = (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Type"
+                    name="type"
+                    value={editForm?.type ?? ''}
+                    onChange={handleEditFieldChange}
+                  >
+                    {typeOptions.map((opt) => (
+                      <MenuItem key={opt.id} value={opt.label}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                );
+              } else if (key === 'name') {
+                field = (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Name"
+                    name="name"
+                    value={editForm?.name ?? ''}
+                    onChange={handleEditFieldChange}
+                  >
+                    {nameOptions.map((opt) => (
+                      <MenuItem key={opt.id} value={opt.label}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                );
+              } else if (key === 'source') {
+                field = (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Source"
+                    name="source"
+                    value={editForm?.source ?? ''}
+                    onChange={handleEditFieldChange}
+                  >
+                    {sourceOptions.map((opt) => (
+                      <MenuItem key={opt.id} value={opt.label}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                );
+              } else if (key === 'sunlight') {
+                field = (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Sunlight"
+                    name="sunlight"
+                    value={editForm?.sunlight ?? ''}
+                    onChange={handleEditFieldChange}
+                  >
+                    {sunlightOptions.map((opt) => (
+                      <MenuItem key={opt.id} value={opt.label}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                );
+              } else if (key === 'is_active') {
+                field = (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={Boolean(value)}
+                        onChange={(e) =>
+                          handleEditFieldChange({
+                            target: {
+                              name: key,
+                              value: e.target.checked,
+                            },
+                          } as unknown as React.ChangeEvent<HTMLInputElement>)
+                        }
+                      />
+                    }
+                    label="Active?"
+                  />
+                );
+              } else if (key === 'image_url') {
+                field = (
+                  <div>
+                    <Button variant="outlined" component="label">
+                      Upload Image
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
 
-                if (key === 'type') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label="Type"
-                      value={value ?? ''}
-                      onChange={ handleEditFieldChange }
-                      fullWidth
-                    >
-                      {typeOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
+                          const fileExt = file.name.split('.').pop();
+                          const filePath = `seeds/${Date.now()}.${fileExt}`;
 
-                if (key === 'name') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label={'Name'}
-                      value={value ?? ''}
-                      onChange={handleEditFieldChange}
-                      fullWidth
-                    >
-                      {nameOptions.map((opt) => (
-                        <MenuItem key={opt.name} value={opt.name}>
-                          {opt.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
+                          const { error } = await supabase.storage
+                            .from('seed-images')
+                            .upload(filePath, file);
 
-                if (key === 'source') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label={'Source'}
-                      value={value ?? ''}
-                      onChange={handleEditFieldChange}
-                      fullWidth
-                    >
-                      {sourceOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
+                          if (error) {
+                            console.error('❌ Upload failed:', error.message);
+                            return;
+                          }
 
-                if (key === 'sunlight') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label={'Sunlight'}
-                      value={value ?? ''}
-                      onChange={handleEditFieldChange}
-                      fullWidth
-                    >
-                      {sunlightOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
+                          const { data: publicUrlData } = supabase
+                            .storage
+                            .from('seed-images')
+                            .getPublicUrl(filePath);
 
-                if (key === 'is_active') {
-                  return (
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={Boolean(value)}
-                          onChange={(e) =>
+                          const publicUrl = publicUrlData?.publicUrl;
+
+                          if (publicUrl) {
                             handleEditFieldChange({
                               target: {
                                 name: key,
-                                value: e.target.checked,
+                                value: publicUrl,
                               },
-                            } as unknown as React.ChangeEvent<HTMLInputElement>)
+                            } as unknown as React.ChangeEvent<HTMLInputElement>);
                           }
-                        />
-                      }
-                      label="Active?"
-                    />
-                  );
-                }
+                        }}
+                      />
+                    </Button>
 
-                if (key === 'image_url') {
-                  return (
-                    <div>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                      >
-                        Upload Image
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-
-                            const fileExt = file.name.split('.').pop();
-                            const filePath = `seeds/${Date.now()}.${fileExt}`;
-
-                            const { error } = await supabase.storage
-                              .from('seed-images') // 🔁 Replace with your actual bucket name
-                              .upload(filePath, file);
-
-                            if (error) {
-                              console.error('Image upload error:', error.message);
-                              return;
-                            }
-
-                            const { data: publicUrlData } = supabase
-                              .storage
-                              .from('seed-images')
-                              .getPublicUrl(filePath);
-
-                            const publicUrl = publicUrlData?.publicUrl;
-
-                            if (publicUrl) {
-                              handleEditFieldChange({
-                                target: {
-                                  name: key,
-                                  value: publicUrl,
-                                },
-                              } as unknown as React.ChangeEvent<HTMLInputElement>);
-                            }
-                          }}
-                        />
-                      </Button>
-
-                      {value && typeof value === 'string' && (
-                        <img
-                          src={value}
-                          alt="Seed"
-                          style={{ marginTop: 8, maxHeight: 100, borderRadius: 4 }}
-                        />
-                      )}
-                    </div>
-                  );
-                }
-
-                return (
+                    {value && typeof value === 'string' && (
+                      <img
+                        src={value}
+                        alt="Seed"
+                        style={{ marginTop: 8, maxHeight: 100, borderRadius: 4 }}
+                      />
+                    )}
+                  </div>
+                );
+              } else {
+                field = (
                   <TextField
-                    key={key}
                     name={key}
                     label={key.replace(/_/g, ' ')}
                     value={value ?? ''}
@@ -715,8 +792,10 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions, typeOp
                     fullWidth
                   />
                 );
-              })()
-            ))}
+              }
+
+              return <div key={key}>{field}</div>; // ✅ key properly set here
+            })}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleModalDelete} color="error">Delete</Button>

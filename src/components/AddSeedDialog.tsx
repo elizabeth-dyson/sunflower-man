@@ -36,14 +36,22 @@ export default function AddSeedDialog({
   typeOptions,
   nameOptions,
   sourceOptions,
+  refreshCategoryOptions,
+  refreshTypeOptions,
+  refreshNameOptions,
+  refreshSourceOptions,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (values: AddSeedForm) => void;
-  categoryOptions: string[];
-  typeOptions: string[];
-  nameOptions: { name: string; category: string }[];
-  sourceOptions: string[];
+  categoryOptions: { id: number; label: string }[];
+  typeOptions: { id: number; label: string }[];
+  nameOptions: { id: number; label: string; category: string }[];
+  sourceOptions: { id: number; label: string }[];
+  refreshCategoryOptions: () => Promise<void>;
+  refreshTypeOptions: () => Promise<void>;
+  refreshNameOptions: () => Promise<void>;
+  refreshSourceOptions: () => Promise<void>;
 }) {
   const initialForm: AddSeedForm = {
     category: '',
@@ -57,13 +65,13 @@ export default function AddSeedDialog({
   };
 
   const [form, setForm] = useState<AddSeedForm>(initialForm);
-  const [filteredNameOptions, setFilteredNameOptions] = useState<string[]>([]);
+  const [filteredNameOptions, setFilteredNameOptions] = useState<{ id: number; label: string }[]>([]);
 
   useEffect(() => {
     if (form.category) {
       const filtered = nameOptions
         .filter((n) => n.category === form.category)
-        .map((n) => n.name);
+        .map((n) => ({ id: n.id, label: n.label}));
 
       setFilteredNameOptions(filtered);
     }
@@ -214,7 +222,7 @@ export default function AddSeedDialog({
     if (name === 'category') {
       const filtered = nameOptions
         .filter((n) => n.category === value)
-        .map((n) => n.name);
+        .map((n) => ({id: n.id, label: n.label}));
       setFilteredNameOptions(filtered);
     }
   };
@@ -248,8 +256,8 @@ export default function AddSeedDialog({
             helperText={!form.category ? 'Category is required' : ''}
           >
             {categoryOptions.map((cat) => (
-              <MenuItem key={cat} value={cat}>
-                {cat}
+              <MenuItem key={cat.id} value={cat.label}>
+                {cat.label}
               </MenuItem>
             ))}
           </TextField>
@@ -259,9 +267,8 @@ export default function AddSeedDialog({
               if (!newVal) return;
               const added = await addNewCategory(newVal);
               if (added) {
-                // Update local state
                 setForm((prev) => ({ ...prev, category: newVal }));
-                categoryOptions.push(newVal); // ✅ or trigger a refresh from DB
+                await refreshCategoryOptions();
               }
             }}
           >
@@ -280,8 +287,8 @@ export default function AddSeedDialog({
             helperText={!form.type ? 'Type is required' : ''}
           >
             {typeOptions.map((typ) => (
-              <MenuItem key={typ} value={typ}>
-                {typ}
+              <MenuItem key={typ.id} value={typ.label}>
+                {typ.label}
               </MenuItem>
             ))}
           </TextField>
@@ -291,9 +298,8 @@ export default function AddSeedDialog({
               if (!newVal) return;
               const added = await addNewType(newVal);
               if (added) {
-                // Update local state
                 setForm((prev) => ({ ...prev, type: newVal }));
-                typeOptions.push(newVal); // ✅ or trigger a refresh from DB
+                await refreshTypeOptions();
               }
             }}
           >
@@ -312,8 +318,8 @@ export default function AddSeedDialog({
             helperText={!form.name ? 'Name is required' : ''}
           >
             {filteredNameOptions.map((nam) => (
-              <MenuItem key={nam} value={nam}>
-                {nam}
+              <MenuItem key={nam.id} value={nam.label}>
+                {nam.label}
               </MenuItem>
             ))}
           </TextField>
@@ -325,7 +331,7 @@ export default function AddSeedDialog({
               const added = await addNewName(newVal, form.category);
               if (added) {
                 setForm((prev) => ({ ...prev, name: newVal }));
-                setFilteredNameOptions((prev) => [...prev, newVal]);
+                await refreshNameOptions();
               }
             }}
           >
@@ -368,8 +374,8 @@ export default function AddSeedDialog({
             helperText={!form.source ? 'Source is required' : ''}
           >
             {sourceOptions.map((sour) => (
-              <MenuItem key={sour} value={sour}>
-                {sour}
+              <MenuItem key={sour.id} value={sour.label}>
+                {sour.label}
               </MenuItem>
             ))}
           </TextField>
@@ -381,7 +387,7 @@ export default function AddSeedDialog({
               if (added) {
                 // Update local state
                 setForm((prev) => ({ ...prev, source: newVal }));
-                sourceOptions.push(newVal); // ✅ or trigger a refresh from DB
+                await refreshSourceOptions();
               }
             }}
           >
