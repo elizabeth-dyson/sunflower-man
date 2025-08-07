@@ -52,7 +52,7 @@ type Props = {
   sunlightOptions: { id: number; label: string }[];
 };
 
-export default function EditableSeedGrid({ initialSeeds, categoryOptions: initialCategoryOptions, typeOptions: initialTypeOptions, nameOptions: initialNameOptions, sourceOptions: initialSourceOptions, sunlightOptions: initialSunlightOptions }: Props) {  
+export default function EditableSeedGrid({ initialSeeds, categoryOptions: initialCategoryOptions, typeOptions: initialTypeOptions, nameOptions: initialNameOptions, sourceOptions: initialSourceOptions, sunlightOptions }: Props) {  
   const supabase = createClient();
 
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
@@ -67,7 +67,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
   const [typeOptions, setTypeOptions] = useState(initialTypeOptions);
   const [nameOptions, setNameOptions] = useState(initialNameOptions);
   const [sourceOptions, setSourceOptions] = useState(initialSourceOptions);
-  const [sunlightOptions, setSunlightOptions] = useState(initialSunlightOptions);
+  // const [sunlightOptions, setSunlightOptions] = useState(initialSunlightOptions);
 
   const refreshCategoryOptions = async () => {
     const { data, error } = await supabase
@@ -142,23 +142,23 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
     setSourceOptions(mapped);
   };
 
-  const refreshSunlightOptions = async () => {
-    const { data, error } = await supabase
-      .from('seeds_sunlight_options')
-      .select('id, sunlight');
+  // const refreshSunlightOptions = async () => {
+  //   const { data, error } = await supabase
+  //     .from('seeds_sunlight_options')
+  //     .select('id, sunlight');
 
-    if (error) {
-      console.error('Failed to refresh sunlights:', error.message);
-      return;
-    }
+  //   if (error) {
+  //     console.error('Failed to refresh sunlights:', error.message);
+  //     return;
+  //   }
 
-    const mapped = data.map((row) => ({
-      id: row.id,
-      label: row.sunlight,
-    }));
+  //   const mapped = data.map((row) => ({
+  //     id: row.id,
+  //     label: row.sunlight,
+  //   }));
 
-    setSunlightOptions(mapped);
-  };
+  //   setSunlightOptions(mapped);
+  // };
 
   const openSeedModal = (seed: SeedType) => {
     setSelectedSeed(seed);
