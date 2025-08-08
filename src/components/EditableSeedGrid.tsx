@@ -444,6 +444,11 @@ export default function EditableSeedGrid({
       .eq('id', seed.id)
       .single();
 
+    if (fetchError || !updatedRow) {
+      console.error('❌ failed to retrieve updated row: ', fetchError?.message);
+      continue;
+    }
+
     setSeeds((prev) => [...prev, updatedRow ?? seed]);
   };
 
