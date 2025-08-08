@@ -8,14 +8,16 @@ import {
   MenuItem,
   FormControlLabel,
   Checkbox,
-  Box
+  Box,
+  Typography,
+  IconButton
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useState, useEffect } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { createClient } from '@/lib/supabaseClient';
-
 
 export type AddSeedForm = {
   category: string;
@@ -43,7 +45,7 @@ export default function AddSeedDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (values: AddSeedForm) => void;
+  onSubmit: (values: AddSeedForm, files: File[]) => void; // ⬅️ updated signature
   categoryOptions: { id: number; label: string }[];
   typeOptions: { id: number; label: string }[];
   nameOptions: { id: number; label: string; category: string }[];
@@ -67,20 +69,30 @@ export default function AddSeedDialog({
   const [form, setForm] = useState<AddSeedForm>(initialForm);
   const [filteredNameOptions, setFilteredNameOptions] = useState<{ id: number; label: string }[]>([]);
 
+  // NEW: hold selected files + previews
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+
   useEffect(() => {
     if (form.category) {
       const filtered = nameOptions
         .filter((n) => n.category === form.category)
-        .map((n) => ({ id: n.id, label: n.label}));
+        .map((n) => ({ id: n.id, label: n.label }));
 
       setFilteredNameOptions(filtered);
     }
   }, [form.category, nameOptions]);
 
+  // Build/rebuild object URLs when files change
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
+
   const supabase = createClient();
 
   const addNewCategory = async (category: string): Promise<boolean> => {
-    // Step 1: get max category_code
     const { data: maxCategoryCodeRow, error: catCodeErr } = await supabase
       .from('seeds_category_options')
       .select('category_code')
@@ -95,7 +107,6 @@ export default function AddSeedDialog({
 
     const nextCategoryCode = (maxCategoryCodeRow?.category_code ?? 0) + 1;
 
-    // Step 2: get max base_name_code
     const { data: maxBaseCodeRow, error: baseCodeErr } = await supabase
       .from('seeds_category_options')
       .select('base_name_code')
@@ -110,7 +121,6 @@ export default function AddSeedDialog({
 
     const nextBaseNameCode = (maxBaseCodeRow?.base_name_code ?? 0) + 100;
 
-    // Step 3: Insert with both codes
     const { error: insertErr } = await supabase
       .from('seeds_category_options')
       .insert({
@@ -128,24 +138,17 @@ export default function AddSeedDialog({
   };
 
   const addNewType = async (type: string) => {
-    console.log("🔍 addNewType called with:", type);
-    const { error: insertErr } = await supabase
-      .from('seeds_type_options')
-      .insert({
-        type,
-      });
-
+    const { error: insertErr } = await supabase.from('seeds_type_options').insert({ type });
     if (insertErr) {
       alert('Failed to add type: ' + insertErr.message);
       return false;
     }
-
     return true;
   };
 
   const addNewName = async (name: string, category: string): Promise<boolean> => {
     if (!category) {
-      alert("Category is required.");
+      alert('Category is required.');
       return false;
     }
 
@@ -156,7 +159,7 @@ export default function AddSeedDialog({
       .single();
 
     if (catErr || !categoryRow) {
-      alert("Failed to get base_name_code: " + catErr?.message);
+      alert('Failed to get base_name_code: ' + catErr?.message);
       return false;
     }
 
@@ -171,13 +174,11 @@ export default function AddSeedDialog({
       .maybeSingle();
 
     if (maxErr) {
-      alert("Failed to get name_code: " + maxErr?.message);
+      alert('Failed to get name_code: ' + maxErr?.message);
       return false;
     }
 
     const nextCode = (maxName?.name_code ?? baseCode - 1) + 1;
-
-    console.log('Inserting name:', { name, category, nextCode });
 
     const { error: insertErr } = await supabase
       .from('seeds_name_options')
@@ -186,7 +187,7 @@ export default function AddSeedDialog({
       .single();
 
     if (insertErr) {
-      alert("Failed to insert name: " + insertErr.message);
+      alert('Failed to insert name: ' + insertErr.message);
       return false;
     }
 
@@ -194,35 +195,25 @@ export default function AddSeedDialog({
   };
 
   const addNewSource = async (source: string) => {
-    const { error: insertErr } = await supabase
-      .from('seeds_source_options')
-      .insert({
-        source,
-      });
-
+    const { error: insertErr } = await supabase.from('seeds_source_options').insert({ source });
     if (insertErr) {
       alert('Failed to add source: ' + insertErr.message);
       return false;
     }
-
     return true;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // Update form
     setForm((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === 'category' ? { name: '' } : {}) // clear name if category changed
+      ...(name === 'category' ? { name: '' } : {}),
     }));
 
-    // If category changed, filter names
     if (name === 'category') {
-      const filtered = nameOptions
-        .filter((n) => n.category === value)
-        .map((n) => ({id: n.id, label: n.label}));
+      const filtered = nameOptions.filter((n) => n.category === value).map((n) => ({ id: n.id, label: n.label }));
       setFilteredNameOptions(filtered);
     }
   };
@@ -236,14 +227,18 @@ export default function AddSeedDialog({
       return;
     }
 
-    onSubmit(form);
+    onSubmit(form, files); // ⬅️ pass images up
     onClose();
+    // reset local state after closing (optional)
+    setFiles([]);
+    setForm(initialForm);
   };
 
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Add New Seed</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+        {/* Category */}
         <Box display="flex" gap={1}>
           <TextField
             select
@@ -275,6 +270,8 @@ export default function AddSeedDialog({
             ➕
           </Button>
         </Box>
+
+        {/* Type */}
         <Box display="flex" gap={1}>
           <TextField
             select
@@ -306,6 +303,8 @@ export default function AddSeedDialog({
             ➕
           </Button>
         </Box>
+
+        {/* Name */}
         <Box display="flex" gap={1}>
           <TextField
             select
@@ -338,25 +337,15 @@ export default function AddSeedDialog({
             ➕
           </Button>
         </Box>
-        <TextField
-          label="Botanical Name"
-          name="botanical_name"
-          value={form.botanical_name}
-          onChange={handleChange}
-        />
-        <TextField
-          label="Color"
-          name="color"
-          value={form.color}
-          onChange={handleChange}
-        />
+
+        {/* Other fields */}
+        <TextField label="Botanical Name" name="botanical_name" value={form.botanical_name} onChange={handleChange} />
+        <TextField label="Color" name="color" value={form.color} onChange={handleChange} />
         <FormControlLabel
           control={
             <Checkbox
               checked={form.is_active}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, is_active: e.target.checked }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
               name="is_active"
             />
           }
@@ -385,7 +374,6 @@ export default function AddSeedDialog({
               if (!newVal) return;
               const added = await addNewSource(newVal);
               if (added) {
-                // Update local state
                 setForm((prev) => ({ ...prev, source: newVal }));
                 await refreshSourceOptions();
               }
@@ -394,10 +382,11 @@ export default function AddSeedDialog({
             ➕
           </Button>
         </Box>
+
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DatePicker
             label="Date Received"
-            value={form.date_received ? new Date(form.date_received) : null} // ← Type-safe
+            value={form.date_received ? new Date(form.date_received) : null}
             onChange={(newDate) =>
               setForm((prev) => ({
                 ...prev,
@@ -405,17 +394,59 @@ export default function AddSeedDialog({
               }))
             }
             slotProps={{
-              textField: {
-                fullWidth: true,
-                required: true,
-              },
+              textField: { fullWidth: true, required: true },
             }}
           />
         </LocalizationProvider>
+
+        {/* Images (multi-select before creating the seed) */}
+        <Box mt={1} display="flex" flexDirection="column" gap={1}>
+          <Typography variant="subtitle1">Images</Typography>
+          <Button variant="outlined" component="label">
+            Select Images
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const fl = e.target.files;
+                if (!fl || fl.length === 0) return;
+                setFiles((prev) => [...prev, ...Array.from(fl)]);
+              }}
+            />
+          </Button>
+
+          {previews.length > 0 && (
+            <Box display="flex" flexWrap="wrap" gap={1}>
+              {previews.map((src, idx) => (
+                <Box key={idx} position="relative" sx={{ width: 110, height: 90, borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd' }}>
+                  <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="preview" />
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setFiles((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                    sx={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      bgcolor: 'rgba(255,255,255,0.8)',
+                      '&:hover': { bgcolor: 'white' },
+                    }}
+                    aria-label="Remove image"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit}>Submit</Button>
+        <Button onClick={handleSubmit}>Submit</Button>
       </DialogActions>
     </Dialog>
   );

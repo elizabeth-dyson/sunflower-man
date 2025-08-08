@@ -20,9 +20,10 @@ import {
   Checkbox,
   Box,
   Button,
-  MenuItem
+  MenuItem,
+  IconButton
 } from '@mui/material';
-
+import DeleteIcon from '@mui/icons-material/Delete';
 
 type SeedType = {
   id: number;
@@ -33,7 +34,7 @@ type SeedType = {
   color: string;
   is_active: boolean;
   source: string;
-  image_url: string | null;
+  image_url: string | null; // legacy single-image field (kept for compatibility)
   sunlight: string | null;
   plant_depth: string | null;
   plant_spacing: string | null;
@@ -52,7 +53,20 @@ type Props = {
   sunlightOptions: { id: number; label: string }[];
 };
 
-export default function EditableSeedGrid({ initialSeeds, categoryOptions: initialCategoryOptions, typeOptions: initialTypeOptions, nameOptions: initialNameOptions, sourceOptions: initialSourceOptions, sunlightOptions }: Props) {  
+type SeedImage = {
+  id: number;            // change to string if your table uses UUID
+  seed_id: number;
+  image_url: string;
+};
+
+export default function EditableSeedGrid({
+  initialSeeds,
+  categoryOptions: initialCategoryOptions,
+  typeOptions: initialTypeOptions,
+  nameOptions: initialNameOptions,
+  sourceOptions: initialSourceOptions,
+  sunlightOptions,
+}: Props) {
   const supabase = createClient();
 
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
@@ -67,128 +81,57 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
   const [typeOptions, setTypeOptions] = useState(initialTypeOptions);
   const [nameOptions, setNameOptions] = useState(initialNameOptions);
   const [sourceOptions, setSourceOptions] = useState(initialSourceOptions);
-  // const [sunlightOptions, setSunlightOptions] = useState(initialSunlightOptions);
 
+  // --- MULTI-IMAGE STATE ---
+  // Map of seed_id -> array of images
+  const [imagesMap, setImagesMap] = useState<Record<number, SeedImage[]>>({});
+
+  // Helpers to refresh option lists (unchanged behavior)
   const refreshCategoryOptions = async () => {
-    const { data, error } = await supabase
-      .from('seeds_category_options')
-      .select('id, category');
-
-    if (error) {
-      console.error('Failed to refresh categories:', error.message);
-      return;
-    }
-
-    const mapped = data.map((row) => ({
-      id: row.id,
-      label: row.category,
-    }));
-
-    setCategoryOptions(mapped);
+    const { data, error } = await supabase.from('seeds_category_options').select('id, category');
+    if (error) return console.error('Failed to refresh categories:', error.message);
+    setCategoryOptions(data.map((row) => ({ id: row.id, label: row.category })));
   };
 
   const refreshTypeOptions = async () => {
-    const { data, error } = await supabase
-      .from('seeds_type_options')
-      .select('id, type');
-
-    if (error) {
-      console.error('Failed to refresh types:', error.message);
-      return;
-    }
-
-    const mapped = data.map((row) => ({
-      id: row.id,
-      label: row.type,
-    }));
-
-    setTypeOptions(mapped);
+    const { data, error } = await supabase.from('seeds_type_options').select('id, type');
+    if (error) return console.error('Failed to refresh types:', error.message);
+    setTypeOptions(data.map((row) => ({ id: row.id, label: row.type })));
   };
 
   const refreshNameOptions = async () => {
-    const { data, error } = await supabase
-      .from('seeds_name_options')
-      .select('id, name, category');
-
-    if (error) {
-      console.error('Failed to refresh names:', error.message);
-      return;
-    }
-
-    const mapped = data.map((row) => ({
-      id: row.id,
-      label: row.name,
-      category: row.category
-    }));
-
-    setNameOptions(mapped);
+    const { data, error } = await supabase.from('seeds_name_options').select('id, name, category');
+    if (error) return console.error('Failed to refresh names:', error.message);
+    setNameOptions(data.map((row) => ({ id: row.id, label: row.name, category: row.category })));
   };
 
   const refreshSourceOptions = async () => {
-    const { data, error } = await supabase
-      .from('seeds_source_options')
-      .select('id, source');
-
-    if (error) {
-      console.error('Failed to refresh sources:', error.message);
-      return;
-    }
-
-    const mapped = data.map((row) => ({
-      id: row.id,
-      label: row.source,
-    }));
-
-    setSourceOptions(mapped);
+    const { data, error } = await supabase.from('seeds_source_options').select('id, source');
+    if (error) return console.error('Failed to refresh sources:', error.message);
+    setSourceOptions(data.map((row) => ({ id: row.id, label: row.source })));
   };
 
-  // const refreshSunlightOptions = async () => {
-  //   const { data, error } = await supabase
-  //     .from('seeds_sunlight_options')
-  //     .select('id, sunlight');
-
-  //   if (error) {
-  //     console.error('Failed to refresh sunlights:', error.message);
-  //     return;
-  //   }
-
-  //   const mapped = data.map((row) => ({
-  //     id: row.id,
-  //     label: row.sunlight,
-  //   }));
-
-  //   setSunlightOptions(mapped);
-  // };
-
-  type SeedImage = { id: string; seed_id: number; image_url: string };
-  const [imagesMap, setImagesMap] = useState<Record<number, string[]>>({});
-
+  // --- IMAGES: load all images once (you can scope to IDs if needed) ---
   useEffect(() => {
     const fetchImages = async () => {
-      const { data, error } = await supabase.from('seed_images').select('*');
+      const { data, error } = await supabase.from('seed_images').select('id, seed_id, image_url');
       if (error) {
         console.error('❌ Failed to fetch seed images:', error.message);
         return;
       }
-
-      const map: Record<number, string[]> = {};
+      const map: Record<number, SeedImage[]> = {};
       data.forEach((img: SeedImage) => {
         if (!map[img.seed_id]) map[img.seed_id] = [];
-        map[img.seed_id].push(img.image_url);
+        map[img.seed_id].push(img);
       });
-
       setImagesMap(map);
     };
-
     fetchImages();
-  }, []);
+  }, [supabase]);
 
   const openSeedModal = (seed: SeedType) => {
     setSelectedSeed(seed);
-
-    setEditForm({
-      ...seed
-    });
+    setEditForm({ ...seed });
   };
 
   const handleEditFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,41 +142,140 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
   const handleModalSave = async () => {
     if (!editForm || !editForm.id) return;
 
-    const updatedForm = {
-      ...editForm
-    };
-
-    const { error } = await supabase
-      .from('seeds')
-      .update(updatedForm)
-      .eq('id', editForm.id);
-
-    if (!error) {
-      setSeeds((prev) =>
-        prev.map((s) => (s.id === editForm.id ? { ...s, ...updatedForm } : s))
-      );
+    const { error } = await supabase.from('seeds').update(editForm).eq('id', editForm.id);
+    if (error) {
+      console.error('🔥 Supabase update error:', error.message, error.details);
+    } else {
+      setSeeds((prev) => prev.map((s) => (s.id === editForm.id ? { ...s, ...editForm } as SeedType : s)));
     }
 
     setSelectedSeed(null);
     setEditForm(null);
   };
 
-  const handleModalDelete = async () => {
-    if (!selectedSeed) return;
-    const confirmDelete = confirm(
-      'This will delete the seed and cascade to inventory and pricing. Are you sure?'
-    );
-    if (!confirmDelete) return;
+  // ---------- MULTI IMAGE HELPERS ----------
+  const bucket = 'seed-images';
 
-    const { error } = await supabase.from('seeds').delete().eq('id', selectedSeed.id);
-    if (!error) {
-      setSeeds((prev) => prev.filter((s) => s.id !== selectedSeed.id));
-      setSelectedSeed(null);
-      setEditForm(null);
+  // Turn a public URL into a storage path (relative to the bucket)
+  const pathFromPublicUrl = (publicUrl: string) => {
+    try {
+      const u = new URL(publicUrl);
+      const marker = `/object/public/${bucket}/`;
+      const idx = u.pathname.indexOf(marker);
+      if (idx === -1) return null;
+      return u.pathname.substring(idx + marker.length);
+    } catch {
+      return null;
     }
   };
 
+  const handleUploadImages = async (seedId: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
+    const newImages: SeedImage[] = [];
+
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `seeds/${seedId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage.from(bucket).upload(path, file);
+      if (uploadErr) {
+        console.error('❌ Upload failed:', uploadErr.message);
+        continue;
+      }
+
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+      if (!publicUrl) continue;
+
+      // Insert DB row
+      const { data: inserted, error: insertErr } = await supabase
+        .from('seed_images')
+        .insert({ seed_id: seedId, image_url: publicUrl })
+        .select('id, seed_id, image_url')
+        .single();
+
+      if (insertErr || !inserted) {
+        console.error('❌ DB insert failed:', insertErr?.message);
+        // try to rollback storage file if you want
+        continue;
+      }
+
+      newImages.push(inserted);
+    }
+
+    if (newImages.length) {
+      setImagesMap((prev) => ({
+        ...prev,
+        [seedId]: [...(prev[seedId] || []), ...newImages],
+      }));
+    }
+  };
+
+  const handleDeleteImage = async (seedId: number, img: SeedImage) => {
+    // 1) Remove from storage
+    const path = pathFromPublicUrl(img.image_url);
+    if (!path) {
+      console.warn('Could not parse storage path from public URL, skipping storage delete.');
+    } else {
+      const { error: storageErr } = await supabase.storage.from(bucket).remove([path]);
+      if (storageErr) {
+        console.error('❌ Storage delete failed:', storageErr.message);
+      }
+    }
+
+    // 2) Remove DB row
+    const { error: dbErr } = await supabase.from('seed_images').delete().eq('id', img.id);
+    if (dbErr) {
+      console.error('❌ DB delete failed:', dbErr.message);
+      return;
+    }
+
+    // 3) Update local state
+    setImagesMap((prev) => ({
+      ...prev,
+      [seedId]: (prev[seedId] || []).filter((i) => i.id !== img.id),
+    }));
+  };
+
+  const removeAllImagesForSeed = async (seedId: number) => {
+    const folder = `seeds/${seedId}`;
+    // list returns items in the folder (no recursion), which is enough if you only store files at this level
+    const { data: files, error: listErr } = await supabase.storage.from(bucket).list(folder);
+    if (listErr) {
+      console.error('❌ list() failed:', listErr.message);
+      return;
+    }
+    if (!files || files.length === 0) return;
+
+    const paths = files.map((f) => `${folder}/${f.name}`);
+    const { error: rmErr } = await supabase.storage.from(bucket).remove(paths);
+    if (rmErr) console.error('❌ bulk remove failed:', rmErr.message);
+  };
+
+  const handleModalDelete = async () => {
+    if (!selectedSeed) return;
+    const confirmDelete = confirm('This will delete the seed and cascade to inventory and pricing. Are you sure?');
+    if (!confirmDelete) return;
+
+    const seedId = selectedSeed.id;
+
+    const { error } = await supabase.from('seeds').delete().eq('id', seedId);
+    if (error) {
+      console.error('❌ Delete failed:', error.message);
+      alert('Delete failed: ' + error.message);
+      return;
+    }
+
+    // ✅ remove all storage files under seeds/<seedId>/
+    await removeAllImagesForSeed(seedId);
+
+    setSeeds((prev) => prev.filter((s) => s.id !== seedId));
+    setSelectedSeed(null);
+    setEditForm(null);
+  };
+
+  // ---------- DataGrid stuff ----------
   const renderCategoryEditInputCell = (
     params: GridRenderEditCellParams<SeedType, string>
   ) => {
@@ -279,15 +321,9 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       scoville: newRow.scoville,
     };
 
-    const { error } = await supabase
-      .from('seeds')
-      .update(updates)
-      .eq('id', newRow.id);
-
+    const { error } = await supabase.from('seeds').update(updates).eq('id', newRow.id);
     if (error) {
       console.error('🔥 Supabase update error:', error.message, error.details);
-      console.log('🔎 update payload:', updates);
-      console.log('🆔 updating row ID:', newRow.id);
       throw error;
     }
 
@@ -299,18 +335,15 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
 
     if (fetchError || !updatedRow) {
       console.error('❌ Re-fetch failed:', fetchError?.message);
-      return newRow; // fallback to original
+      return newRow;
     }
 
-    // ✅ Update local state with fresh DB copy
-    setSeeds((prev) =>
-      prev.map((s) => (s.id === updatedRow.id ? updatedRow : s))
-    );
-
+    setSeeds((prev) => prev.map((s) => (s.id === updatedRow.id ? updatedRow : s)));
     return updatedRow;
   };
 
-  const handleAddSeed = async (form: AddSeedForm) => {
+  const handleAddSeed = async (form: AddSeedForm, files: File[]) => {
+    // 1) create seed
     const { data: seed, error: seedError } = await supabase
       .from('seeds')
       .insert([
@@ -332,15 +365,10 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       return;
     }
 
-    // ✅ Insert inventory
+    // 2) inventory
     const { data: inventoryData, error: inventoryError } = await supabase
       .from('inventory')
-      .insert([
-        {
-          seed_id: seed.id,
-          date_received: form.date_received,
-        },
-      ])
+      .insert([{ seed_id: seed.id, date_received: form.date_received }])
       .select()
       .single();
 
@@ -349,7 +377,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       return;
     }
 
-    // ✅ Insert pricing
+    // 3) pricing
     const { error: pricingError } = await supabase
       .from('costs_and_pricing')
       .insert([
@@ -370,21 +398,54 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       return;
     }
 
+    // 4) upload all selected images
+    const bucket = 'seed-images';
+    const newImages: SeedImage[] = [];
+
+    for (const file of files) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `seeds/${seed.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage.from(bucket).upload(path, file);
+      if (uploadErr) {
+        console.error('❌ Upload failed:', uploadErr.message);
+        continue;
+      }
+
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+      if (!publicUrl) continue;
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('seed_images')
+        .insert({ seed_id: seed.id, image_url: publicUrl })
+        .select('id, seed_id, image_url')
+        .single();
+
+      if (insertErr || !inserted) {
+        console.error('❌ seed_images insert failed:', insertErr?.message);
+        continue;
+      }
+
+      newImages.push(inserted);
+    }
+
+    if (newImages.length) {
+      setImagesMap((prev) => ({
+        ...prev,
+        [seed.id]: [...(prev[seed.id] || []), ...newImages],
+      }));
+    }
+
+    // 5) hydrate seed row
     const { data: updatedRow, error: fetchError } = await supabase
       .from('seeds')
       .select('*')
       .eq('id', seed.id)
       .single();
 
-    if (fetchError || !updatedRow) {
-      console.error('❌ Re-fetch failed:', fetchError?.message);
-      setSeeds((prev) => [...prev, seed]);
-    } else {
-      setSeeds((prev) => [...prev, updatedRow]);
-    }
+    setSeeds((prev) => [...prev, updatedRow ?? seed]);
   };
-
-
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90, editable: false },
@@ -395,7 +456,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: categoryOptions.map(c => c.label),
+      valueOptions: categoryOptions.map((c) => c.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -404,7 +465,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       width: 130,
       editable: true,
       type: 'singleSelect',
-      valueOptions: typeOptions.map(c => c.label),
+      valueOptions: typeOptions.map((c) => c.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -423,9 +484,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       headerName: 'Active?',
       width: 100,
       editable: true,
-      renderCell: (params) => (
-        <input type="checkbox" checked={params.value} disabled />
-      ),
+      renderCell: (params) => <input type="checkbox" checked={params.value} disabled />,
       renderEditCell: (params) => (
         <input
           type="checkbox"
@@ -447,7 +506,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       width: 130,
       editable: true,
       type: 'singleSelect',
-      valueOptions: sourceOptions.map(c => c.label),
+      valueOptions: sourceOptions.map((c) => c.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -456,7 +515,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       width: 150,
       editable: true,
       type: 'singleSelect',
-      valueOptions: sunlightOptions.map(s => s.label),
+      valueOptions: sunlightOptions.map((s) => s.label),
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
@@ -464,8 +523,10 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       headerName: 'Image',
       width: 100,
       editable: true,
-      renderCell: (params) =>
-        params.value ? <img src={params.value} alt="seed" style={{ height: 40 }} /> : 'N/A',
+      renderCell: (params) => {
+        const first = imagesMap[params.row.id]?.[0]?.image_url;
+        return first ? <img src={first} alt="seed" style={{ height: 40 }} /> : 'N/A';
+      },
     },
     { field: 'plant_depth', headerName: 'Plant Depth', width: 150, editable: true },
     { field: 'plant_spacing', headerName: 'Plant Spacing', width: 130, editable: true },
@@ -503,22 +564,22 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
   const handleDelete = async () => {
     if (!deleteId) return;
 
-    const { error } = await supabase
-      .from('seeds')
-      .delete()
-      .eq('id', deleteId);
+    const seedId = deleteId;
+    const { error } = await supabase.from('seeds').delete().eq('id', seedId);
 
     if (error) {
       console.error('❌ Delete failed:', error.message);
       alert('Delete failed: ' + error.message);
     } else {
-      setSeeds((prev) => prev.filter((s) => s.id !== deleteId));
+      // ✅ remove all storage files under seeds/<seedId>/
+      await removeAllImagesForSeed(seedId);
+
+      setSeeds((prev) => prev.filter((s) => s.id !== seedId));
     }
 
     setDeleteId(null);
     setConfirmOpen(false);
   };
-
 
   return (
     <>
@@ -583,16 +644,11 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
         <Grid container spacing={2}>
           {filteredSeeds.map((seed) => (
             // @ts-expect-error MUI types are wrong here
-            <Grid 
-              item xs={12} 
-              sm={6} md={4} 
-              lg={3} 
-              key={seed.id} 
-            >
+            <Grid item xs={12} sm={6} md={4} lg={3} key={seed.id}>
               <Card onClick={() => openSeedModal(seed)} sx={{ cursor: 'pointer' }}>
                 <CardMedia
                   component="img"
-                  image={imagesMap[seed.id]?.[0] || '/placeholder.png'}
+                  image={imagesMap[seed.id]?.[0]?.image_url || '/placeholder.png'}
                   alt={seed.name}
                   sx={{
                     width: '100%',
@@ -629,11 +685,64 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
       )}
 
       {/* Seed Modal */}
-      <Dialog open={!!selectedSeed} onClose={() => setSelectedSeed(null)} maxWidth="sm" fullWidth>
+      <Dialog open={!!selectedSeed} onClose={() => setSelectedSeed(null)} maxWidth="md" fullWidth>
         <DialogTitle>{editForm?.name} Details</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Images section (multi image) */}
+          {selectedSeed && (
+            <Box display="flex" flexDirection="column" gap={1}>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Typography variant="subtitle1">Images</Typography>
+                <Button variant="outlined" component="label">
+                  Upload Images
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleUploadImages(selectedSeed.id, e.target.files)}
+                  />
+                </Button>
+              </Box>
+
+              <Box display="flex" flexWrap="wrap" gap={1}>
+                {(imagesMap[selectedSeed.id] || []).map((img) => (
+                  <Box
+                    key={img.id}
+                    position="relative"
+                    sx={{ width: 110, height: 90, borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd' }}
+                  >
+                    <img
+                      src={img.image_url}
+                      alt="Seed"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteImage(selectedSeed.id, img)}
+                      sx={{
+                        position: 'absolute',
+                        top: 2,
+                        right: 2,
+                        bgcolor: 'rgba(255,255,255,0.8)',
+                        '&:hover': { bgcolor: 'white' },
+                      }}
+                      aria-label="Delete image"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Dynamic form fields */}
           {editForm &&
             Object.entries(editForm).map(([key, value]) => {
+              // Skip legacy single-image field from the dynamic list (we manage images above)
+              if (key === 'image_url') return null;
+
               let field: React.ReactNode = null;
 
               if (key === 'id' || key === 'sku') {
@@ -642,9 +751,7 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
                     name={key}
                     label={key.toUpperCase()}
                     value={value ?? ''}
-                    slotProps={{
-                      input: { disabled: true },
-                    }}
+                    slotProps={{ input: { disabled: true } }}
                     fullWidth
                   />
                 );
@@ -741,269 +848,13 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
                         checked={Boolean(value)}
                         onChange={(e) =>
                           handleEditFieldChange({
-                            target: {
-                              name: key,
-                              value: e.target.checked,
-                            },
+                            target: { name: key, value: e.target.checked },
                           } as unknown as React.ChangeEvent<HTMLInputElement>)
                         }
                       />
                     }
                     label="Active?"
                   />
-                );
-              } else if (key === 'image_url') {
-                field = (
-                  <div>
-                    <Button variant="outlined" component="label">
-                      Upload Image
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-            Object.entries(editForm).map(([key, value]) => (
-              (() => {
-                if (key === 'id' || key === 'sku') {
-                  return (
-                    <TextField
-                      key={key}
-                      name={key}
-                      label={key.toUpperCase()}
-                      value={value ?? ''}
-                      slotProps={{
-                        input: { disabled: true },
-                      }}
-                      fullWidth
-                    />
-                  );
-                }
-
-                if (key === 'category') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label="Category"
-                      value={value ?? ''}
-                      onChange={ handleEditFieldChange }
-                      fullWidth
-                    >
-                      {categoryOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
-
-                if (key === 'type') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label="Type"
-                      value={value ?? ''}
-                      onChange={ handleEditFieldChange }
-                      fullWidth
-                    >
-                      {typeOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
-
-                if (key === 'name') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label={'Name'}
-                      value={value ?? ''}
-                      onChange={handleEditFieldChange}
-                      fullWidth
-                    >
-                      {nameOptions.map((opt) => (
-                        <MenuItem key={opt.name} value={opt.name}>
-                          {opt.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
-
-                if (key === 'source') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label={'Source'}
-                      value={value ?? ''}
-                      onChange={handleEditFieldChange}
-                      fullWidth
-                    >
-                      {sourceOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
-
-                if (key === 'sunlight') {
-                  return (
-                    <TextField
-                      select
-                      key={key}
-                      name={key}
-                      label={'Sunlight'}
-                      value={value ?? ''}
-                      onChange={handleEditFieldChange}
-                      fullWidth
-                    >
-                      {sunlightOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  );
-                }
-
-                if (key === 'is_active') {
-                  return (
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={Boolean(value)}
-                          onChange={(e) =>
-                            handleEditFieldChange({
-                              target: {
-                                name: key,
-                                value: e.target.checked,
-                              },
-                            } as unknown as React.ChangeEvent<HTMLInputElement>)
-                          }
-                        />
-                      }
-                      label="Active?"
-                    />
-                  );
-                }
-
-                if (key === 'image_url') {
-                  return (
-                    <div>
-                      {selectedSeed && (
-                        <Box display="flex" flexWrap="wrap" gap={1}>
-                          {(imagesMap[selectedSeed.id] || []).map((imgUrl, idx) => (
-                            <img
-                              key={idx}
-                              src={imgUrl}
-                              style={{
-                                height: 80,
-                                borderRadius: 4,
-                                border: '1px solid #ccc',
-                              }}
-                            />
-                          ))}
-                        </Box>
-                      )}
-                      <Button
-                        variant="outlined"
-                        component="label"
-                      >
-                        Upload Image
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file || !selectedSeed) return;
-
-                          const fileExt = file.name.split('.').pop();
-                          const filePath = `seeds/${Date.now()}.${fileExt}`;
-
-                          const { error } = await supabase.storage
-                            .from('seed-images')
-                            .upload(filePath, file);
-                            const { error: uploadError } = await supabase
-                              .storage
-                              .from('seed-images')
-                              .upload(filePath, file);
-
-                          if (error) {
-                            console.error('❌ Upload failed:', error.message);
-                            return;
-                          }
-                            if (uploadError) {
-                              console.error('❌ Upload failed:', uploadError.message);
-                              return;
-                            }
-
-                          const { data: publicUrlData } = supabase
-                            .storage
-                            .from('seed-images')
-                            .getPublicUrl(filePath);
-                            const { data: publicData } = supabase
-                              .storage
-                              .from('seed-images')
-                              .getPublicUrl(filePath);
-
-                          const publicUrl = publicUrlData?.publicUrl;
-
-                          if (publicUrl) {
-                            handleEditFieldChange({
-                              target: {
-                                name: key,
-                                value: publicUrl,
-                              },
-                            } as unknown as React.ChangeEvent<HTMLInputElement>);
-                          }
-                        }}
-                      />
-                    </Button>
-                            const publicUrl = publicData?.publicUrl;
-                            if (!publicUrl) return;
-
-                            const { error: insertError } = await supabase
-                              .from('seed_images')
-                              .insert({ seed_id: selectedSeed.id, image_url: publicUrl });
-
-                            if (insertError) {
-                              console.error('❌ Insert failed:', insertError.message);
-                              return;
-                            }
-
-                            // Refresh local images
-                            setImagesMap((prev) => ({
-                              ...prev,
-                              [selectedSeed.id]: [...(prev[selectedSeed.id] || []), publicUrl],
-                            }));
-                          }}
-                        />
-                      </Button>
-
-                    {value && typeof value === 'string' && (
-                      <img
-                        src={value}
-                        alt="Seed"
-                        style={{ marginTop: 8, maxHeight: 100, borderRadius: 4 }}
-                      />
-                    )}
-                  </div>
                 );
               } else {
                 field = (
@@ -1017,13 +868,17 @@ export default function EditableSeedGrid({ initialSeeds, categoryOptions: initia
                 );
               }
 
-              return <div key={key}>{field}</div>; // ✅ key properly set here
+              return <div key={key}>{field}</div>;
             })}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleModalDelete} color="error">Delete</Button>
+          <Button onClick={handleModalDelete} color="error">
+            Delete
+          </Button>
           <Button onClick={() => setSelectedSeed(null)}>Cancel</Button>
-          <Button onClick={handleModalSave} variant="contained">Save</Button>
+          <Button onClick={handleModalSave} variant="contained">
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
     </>
