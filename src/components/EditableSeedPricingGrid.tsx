@@ -65,11 +65,23 @@ export default function EditableSeedPricingGrid({
       throw error;
     }
 
+    const { data: updatedRow, error: fetchError } = await supabase
+      .from('costs_and_pricing')
+      .select('*')
+      .eq('id', newRow.id)
+      .single();
+
+    if (fetchError || !updatedRow) {
+      console.error('❌ Re-fetch failed:', fetchError?.message);
+      return newRow; // fallback to original
+    }
+
+    // ✅ Update local state with fresh DB copy
     setPrices((prev) =>
-      prev.map((row) => (row.id === newRow.id ? { ...row, ...updates } : row))
+      prev.map((s) => (s.id === updatedRow.id ? updatedRow : s))
     );
 
-    return { ...newRow, ...updates };
+    return updatedRow;
   };
 
   const columns: GridColDef[] = [

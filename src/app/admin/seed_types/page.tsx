@@ -20,56 +20,74 @@ export default async function SeedsPage() {
 
   const { data: categoryOptions, error: categoryError } = await supabase
     .from('seeds_category_options') // your category table
-    .select('category');
+    .select('id,category');
 
   if (categoryError || !categoryOptions) {
     console.log('Error message: ', categoryError)
     throw new Error('Failed to load categories');
   } 
 
-  const categories = categoryOptions.map(c => c.category);
+  const categories = categoryOptions.map((row) => ({
+    id: row.id,
+    label: row.category,
+  }));
 
   const { data: typeOptions, error: typeError } = await supabase
     .from('seeds_type_options') // your category table
-    .select('type');
+    .select('id,type');
 
   if (typeError || !typeOptions) {
     console.log('Error message: ', typeError)
     throw new Error('Failed to load types');
   } 
 
-  const types = typeOptions.map(c => c.type);
+  const types = typeOptions.map((row) => ({
+    id: row.id,
+    label: row.type,
+  }));
 
   const { data: nameOptions, error: nameError } = await supabase
     .from('seeds_name_options') // your category table
-    .select('name,category');
+    .select('id,name,category');
 
   if (nameError || !nameOptions) {
     console.log('Error message: ', nameError)
     throw new Error('Failed to load names');
   } 
 
+  const names = nameOptions.map((row) => ({
+    id: row.id,
+    label: row.name,
+    category: row.category
+  }));
+
   const { data: sourceOptions, error: sourceError } = await supabase
     .from('seeds_source_options') // your category table
-    .select('source');
+    .select('id,source');
 
   if (sourceError || !sourceOptions) {
     console.log('Error message: ', sourceError)
     throw new Error('Failed to load sources');
   } 
 
-  const sources = sourceOptions.map(c => c.source);
+  const sources = sourceOptions.map((row) => ({
+    id: row.id,
+    label: row.source,
+  }));
 
   const { data: sunlightOptions, error: sunlightError } = await supabase
     .from('seeds_sunlight_options') // your category table
-    .select('sunlight');
+    .select('id,sunlight');
 
   if (sunlightError || !sunlightOptions) {
     console.log('Error message: ', sunlightError)
     throw new Error('Failed to load sunlights');
   } 
 
-  const sunlights = sunlightOptions.map(c => c.sunlight);
+  const sunlights = sunlightOptions.map((row) => ({
+    id: row.id,
+    label: row.sunlight,
+  }));
 
   return (
     <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
@@ -79,7 +97,7 @@ export default async function SeedsPage() {
         🌻 Seed Types
       </h1>
 
-      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={nameOptions} sourceOptions={sources} sunlightOptions={sunlights} />
+      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={names} sourceOptions={sources} sunlightOptions={sunlights} />
     </div>
   );
 }

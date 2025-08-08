@@ -66,11 +66,23 @@ export default function EditableInventoryGrid({
       throw error;
     }
 
+    const { data: updatedRow, error: fetchError } = await supabase
+      .from('inventory')
+      .select('*')
+      .eq('id', newRow.id)
+      .single();
+
+    if (fetchError || !updatedRow) {
+      console.error('❌ Re-fetch failed:', fetchError?.message);
+      return newRow; // fallback to original
+    }
+
+    // ✅ Update local state with fresh DB copy
     setInventory((prev) =>
-      prev.map((item) => (item.id === newRow.id ? { ...item, ...updates } : item))
+      prev.map((s) => (s.id === updatedRow.id ? updatedRow : s))
     );
 
-    return { ...newRow, ...updates };
+    return updatedRow;
   };
 
   const columns: GridColDef[] = [
