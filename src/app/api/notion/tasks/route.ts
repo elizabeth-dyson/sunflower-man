@@ -1,47 +1,56 @@
 import { NextResponse } from 'next/server';
-import { getNotionClient } from '@/lib/notion';
+import {
+  getNotion,
+  getTitle,
+  getRollupTitles,
+  getStatusName,
+  getDateStart,
+  getRichText,
+  NotionPage,
+} from '@/lib/notionSafe';
 
 export const dynamic = 'force-dynamic';
 
+type OutTask = {
+  id: string;
+  task: string;
+  contentName: string | null;
+  goalDate: string | null;
+  status: string | undefined;
+  notes: string | null;
+  url: string;
+};
+
 export async function GET() {
   try {
-    const notion = getNotionClient();
+    const notion = getNotion();
     const dbId = process.env.NOTION_TASK_TRACKER_ID;
     if (!dbId) throw new Error('NOTION_TASK_TRACKER_ID is not set');
 
     const res = await notion.databases.query({
       database_id: dbId,
       sorts: [{ property: 'Goal Date', direction: 'ascending' }],
-      page_size: 50,
-      filter: {
-      property: 'Status',
-        status: {
-          does_not_equal: 'Done',
-        },
-      },
+      page_size: 100,
+      filter: { property: 'Status', status: { does_not_equal: 'Done' } }, // change to select{} if needed
     });
 
-    const tasks = res.results.map((p: any) => {
-      const taskProp = p.properties['Task'];
-      const contentProp = p.properties['Content Name'];
-      const goalProp = p.properties['Goal Date'];
-      const statusProp = p.properties['Status'];
-      const notesProp = p.properties['Notes'];
-
+    const tasks: OutTask[] = (res.results as NotionPage[]).map((p) => {
+      const task = getTitle(p, 'Task') || '(Untitled)';
+      const contentTitles = getRollupTitles(p, 'Content Name');
       return {
-        id: p.id as string,
-        task:
-          taskProp?.title?.[0]?.plain_text?.trim() ||
-          '(Untitled)',
-        contentName: contentProp?.rollup?.array[0]?.title[0]?.plain_text ?? null,
-        goalDate: goalProp?.date?.start ?? null,
-        status: statusProp?.status?.name ?? statusProp?.select?.name ?? undefined,
-        notes: notesProp?.rich_text?.map((t: any) => t.plain_text).join(' ') || null,
+        id: p.id,
+        task,
+        contentName: contentTitles.length ? contentTitles.join(', ') : null,
+        goalDate: getDateStart(p, 'Goal Date'),
+        status: getStatusName(p, 'Status'),
+        notes: getRichText(p, 'Notes'),
+        url: p.url,
       };
     });
 
     return NextResponse.json({ tasks });
-  } catch (err: any) {
-    return NextResponse.json({ tasks: [], error: err?.message ?? 'Notion Task Tracker error' }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Notion Task Tracker error';
+    return NextResponse.json({ tasks: [], error: msg }, { status: 500 });
   }
 }

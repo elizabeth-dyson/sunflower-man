@@ -1,39 +1,46 @@
 import { NextResponse } from 'next/server';
-import { getNotionClient } from '@/lib/notion';
+import {
+  getNotion,
+  getTitle,
+  getSelectName,
+  getNumberValue,
+  NotionPage,
+} from '@/lib/notionSafe';
 
 export const dynamic = 'force-dynamic';
 
+type OutResource = {
+  id: string;
+  resourceName: string;
+  resourceType: string | undefined;
+  price: number | null;
+  priceFrequency: string | undefined;
+  url: string;
+};
+
 export async function GET() {
   try {
-    const notion = getNotionClient();
+    const notion = getNotion();
     const dbId = process.env.NOTION_RESOURCE_TRACKER_ID;
     if (!dbId) throw new Error('NOTION_RESOURCE_TRACKER_ID is not set');
 
     const res = await notion.databases.query({
       database_id: dbId,
-      sorts: [],
-      page_size: 50,
+      page_size: 100,
     });
 
-    const resources = res.results.map((p: any) => {
-      const resourceNameProp = p.properties['Resource Name'];
-      const resourceTypeProp = p.properties['Resource Type'];
-      const priceProp = p.properties['Price'];
-      const priceFrequencyProp = p.properties['Price Frequency'];
+    const items: OutResource[] = (res.results as NotionPage[]).map((p) => ({
+      id: p.id,
+      resourceName: getTitle(p, 'Resource Name') || '(Untitled)',
+      resourceType: getSelectName(p, 'Resource Type'),
+      price: getNumberValue(p, 'Price'),
+      priceFrequency: getSelectName(p, 'Price Frequency'),
+      url: p.url,
+    }));
 
-      return {
-        id: p.id as string,
-        resourceName:
-          resourceNameProp?.title?.[0]?.plain_text?.trim() ||
-          '(Untitled)',
-        resourceType: resourceTypeProp?.select?.name ?? undefined,
-        price: priceProp?.number?.[0] ?? null,
-        priceFrequency: priceFrequencyProp?.plain_text?.trim() ?? undefined,
-      };
-    });
-
-    return NextResponse.json({ resources });
-  } catch (err: any) {
-    return NextResponse.json({ resources: [], error: err?.message ?? 'Notion Resource Tracker error' }, { status: 500 });
+    return NextResponse.json({ resources: items });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Notion Resource error';
+    return NextResponse.json({ resources: [], error: msg }, { status: 500 });
   }
 }
