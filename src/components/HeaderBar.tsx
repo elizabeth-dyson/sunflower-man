@@ -1,11 +1,9 @@
 'use client';
 
 import { PropsWithChildren } from 'react';
-import { Box, Button, Container, Divider, Typography } from '@mui/material';
+import { Box, Container, Divider, Typography } from '@mui/material';
 import LogoutButton from '@/components/LogoutButton';
 import BackButton from '@/components/BackButton';
-import { createClient } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
 
 type HeaderBarProps = {
   title: string;
@@ -13,14 +11,6 @@ type HeaderBarProps = {
 };
 
 export default function HeaderBar({ title, emoji = '🌻' }: PropsWithChildren<HeaderBarProps>) {
-  const supabase = createClient();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
   return (
     <Box sx={{ position: 'relative', bgcolor: 'background.paper' }}>
       <Container maxWidth="lg" sx={{ py: 2 }}>

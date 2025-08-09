@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DataGrid, GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { createClient } from '@/lib/supabaseClient';
 import AddSeedDialog from './AddSeedDialog';
 import type { AddSeedForm } from './AddSeedDialog';
@@ -159,7 +159,7 @@ export default function EditableSeedGrid({
     if (!editForm || !editForm.id) return;
     const { id, ...payload } = editForm;
 
-    const { error } = await supabase.from('seeds').update(payload).eq('id', editForm.id);
+    const { error } = await supabase.from('seeds').update(payload).eq('id', id);
     if (error) {
       console.error('🔥 Supabase update error:', error.message, error.details);
     } else {
