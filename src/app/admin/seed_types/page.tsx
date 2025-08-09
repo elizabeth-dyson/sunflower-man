@@ -8,7 +8,21 @@ export const metadata: Metadata = {
   title: 'Seed Types | Admin',
 };
 
-export default async function SeedsPage() {
+function parseSeedIds(sp?: string | string[] | null): number[] {
+  // Normalize to a single string
+  const str = Array.isArray(sp) ? sp.join(',') : sp ?? '';
+  // Extract all integer substrings and convert -> number
+  const matches = str.match(/\d+/g) ?? [];
+  const ids = matches.map((m) => Number(m));
+  // Dedup + keep only finite numbers
+  return Array.from(new Set(ids)).filter((n) => Number.isFinite(n));
+}
+
+export default async function SeedsPage({
+  searchParams,
+}: {
+  searchParams?: Promise< { seedIds?: string | string[] } >;
+}) {
   const supabase = await createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -89,11 +103,14 @@ export default async function SeedsPage() {
     label: row.sunlight,
   }));
 
+  const sp = (await searchParams)?.seedIds ?? null;
+  const seedIds = parseSeedIds(sp);
+
   return (
     <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
       <HeaderBar title="Seed Types" emoji="🌻" />
 
-      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={names} sourceOptions={sources} sunlightOptions={sunlights} />
+      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={names} sourceOptions={sources} sunlightOptions={sunlights} initialSeedIds={seedIds} />
     </div>
   );
 }

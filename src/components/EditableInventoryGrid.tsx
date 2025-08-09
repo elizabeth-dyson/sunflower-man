@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { useState, useEffect } from 'react';
+import { DataGrid, GridColDef, GridFilterModel } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
 import { createClient } from '@/lib/supabaseClient';
 
@@ -24,8 +24,10 @@ interface SeedInventory {
 
 export default function EditableInventoryGrid({
   initialInventory,
+  initialSeedIds,
 }: {
   initialInventory: SeedInventory[];
+  initialSeedIds: number[];
 }) {
   const supabase = createClient();
   const [inventory, setInventory] = useState<SeedInventory[]>(initialInventory);
@@ -141,6 +143,20 @@ export default function EditableInventoryGrid({
     { field: 'notes', headerName: 'Notes', width: 200, editable: true },
   ];
 
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({
+    items: initialSeedIds.length
+      ? [{ field: 'seed_id', operator: 'isAnyOf', value: initialSeedIds }]
+      : [],
+  });
+
+  useEffect(() => {
+    if (initialSeedIds.length) {
+      setFilterModel({
+        items: [{ field: 'seed_id', operator: 'isAnyOf', value: initialSeedIds }],
+      });
+    }
+  }, [initialSeedIds]);
+
   return (
     <>
       <Box display="flex" justifyContent="center" mb={2}>
@@ -169,6 +185,8 @@ export default function EditableInventoryGrid({
             console.error('Row update error:', error);
           }}
           pageSizeOptions={[10, 25, 50]}
+          filterModel={filterModel}
+          onFilterModelChange={setFilterModel}
         />
       </div>
     </>

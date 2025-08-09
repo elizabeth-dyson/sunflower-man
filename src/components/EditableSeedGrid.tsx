@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridFilterModel } from '@mui/x-data-grid';
 import { createClient } from '@/lib/supabaseClient';
 import AddSeedDialog from './AddSeedDialog';
 import type { AddSeedForm } from './AddSeedDialog';
@@ -49,6 +49,7 @@ type Props = {
   nameOptions: { id: number; label: string; category: string }[];
   sourceOptions: { id: number; label: string }[];
   sunlightOptions: { id: number; label: string }[];
+  initialSeedIds: number[];
 };
 
 type SeedImage = {
@@ -65,6 +66,7 @@ export default function EditableSeedGrid({
   nameOptions: initialNameOptions,
   sourceOptions: initialSourceOptions,
   sunlightOptions,
+  initialSeedIds,
 }: Props) {
   const supabase = createClient();
   const bucket = 'seed-images';
@@ -473,6 +475,20 @@ export default function EditableSeedGrid({
     return newRow;
   };
 
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({
+    items: initialSeedIds.length
+      ? [{ field: 'id', operator: 'isAnyOf', value: initialSeedIds }]
+      : [],
+  });
+
+  useEffect(() => {
+    if (initialSeedIds.length) {
+      setFilterModel({
+        items: [{ field: 'id', operator: 'isAnyOf', value: initialSeedIds }],
+      });
+    }
+  }, [initialSeedIds]);
+
   return (
     <>
       {/* Controls row: LEFT toggle, CENTER search, RIGHT add */}
@@ -597,6 +613,8 @@ export default function EditableSeedGrid({
             processRowUpdate={handleRowUpdate}
             onProcessRowUpdateError={(err) => console.error(err)}
             disableRowSelectionOnClick
+            filterModel={filterModel}
+            onFilterModelChange={setFilterModel}
           />
         </div>
       )}

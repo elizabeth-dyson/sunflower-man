@@ -54,7 +54,8 @@ type Issue = {
   kind: 'Media' | 'Data Hygiene' | 'Inventory' | 'Pricing & Profit';
   label: string;
   hint?: string;
-  seedId?: number;
+  seedId?: number;        // existing single id
+  seedIds?: number[];     // NEW: multiple or single IDs
   action?: React.ReactNode;
 };
 
@@ -257,6 +258,7 @@ export default function DataQuality() {
           key: `media-nopic-${s.id}`,
           kind: 'Media',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Missing pictures — "${s.name}"`
         });
       }
@@ -272,11 +274,13 @@ export default function DataQuality() {
     }
     for (const [norm, arr] of byName) {
       if (arr.length > 1) {
+        const ids = arr.map((x) => x.id);
         issues.push({
           key: `dup-name-${norm}`,
           kind: 'Data Hygiene',
           label: `Duplicate seed name "${arr[0].name}"`,
-          hint: `IDs: ${arr.map((x) => x.id).join(', ')}`
+          hint: `IDs: ${ids.join(', ')}`,
+          seedIds: ids,            // <-- include all IDs
         });
       }
     }
@@ -329,6 +333,7 @@ export default function DataQuality() {
             key: `missing-${String(f)}-${s.id}`,
             kind: 'Data Hygiene',
             seedId: s.id,
+            seedIds: [s.id],
             label: `Missing ${String(f).replaceAll('_', ' ')} — "${s.name}"`
           });
         }
@@ -344,6 +349,7 @@ export default function DataQuality() {
           key: `pepper-scoville-${s.id}`,
           kind: 'Data Hygiene',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Pepper missing Scoville — "${s.name}"`
         });
       }
@@ -362,6 +368,7 @@ export default function DataQuality() {
           key: `sku-${s.id}`,
           kind: 'Data Hygiene',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Weird or missing SKU — "${s.name}"`,
           hint: s.sku ? `Current: ${s.sku}` : 'Missing'
         });
@@ -376,6 +383,7 @@ export default function DataQuality() {
           key: `inv-none-${s.id}`,
           kind: 'Inventory',
           seedId: s.id,
+          seedIds: [s.id],
           label: `No inventory row — "${s.name}"`
         });
         continue;
@@ -388,6 +396,7 @@ export default function DataQuality() {
           key,
           kind: 'Inventory',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Inventory fields missing — "${s.name}"`,
           action: (
             <InventoryQuickEdit
@@ -413,6 +422,7 @@ export default function DataQuality() {
             key,
             kind: 'Inventory',
             seedId: s.id,
+            seedIds: [s.id],
             label: `Expired inventory — "${s.name}"`,
             hint: `Expired on ${new Date(inv.expiration_date).toLocaleDateString()}`,
             action: (
@@ -433,6 +443,7 @@ export default function DataQuality() {
           key,
           kind: 'Inventory',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Buy more flagged — "${s.name}"`,
           action: (
             <button
@@ -455,6 +466,7 @@ export default function DataQuality() {
           key: `pr-none-${s.id}`,
           kind: 'Pricing & Profit',
           seedId: s.id,
+          seedIds: [s.id],
           label: `No pricing row — "${s.name}"`
         });
         continue;
@@ -465,6 +477,7 @@ export default function DataQuality() {
           key,
           kind: 'Pricing & Profit',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Retail price missing/0 — "${s.name}"`,
           action: (
             <PricingQuickEdit
@@ -482,6 +495,7 @@ export default function DataQuality() {
           key: `pr-negative-${s.id}`,
           kind: 'Pricing & Profit',
           seedId: s.id,
+          seedIds: [s.id],
           label: `Negative net profit — "${s.name}"`,
           hint: `Current: ${pr.net_profit.toFixed(2)}`
         });
@@ -489,8 +503,8 @@ export default function DataQuality() {
     }
 
     return {
-      Media: issues.filter((i) => i.kind === 'Media'),
       'Data Hygiene': issues.filter((i) => i.kind === 'Data Hygiene'),
+      Media: issues.filter((i) => i.kind === 'Media'),
       Inventory: issues.filter((i) => i.kind === 'Inventory'),
       'Pricing & Profit': issues.filter((i) => i.kind === 'Pricing & Profit')
     };
@@ -509,6 +523,12 @@ export default function DataQuality() {
 
     const visible = expanded ? items : items.slice(0, defaultLimit);
     const hiddenCount = Math.max(items.length - visible.length, 0);
+
+    function buildUrl(base: string, ids?: number[]) {
+      if (!ids || ids.length === 0) return base;
+      const qs = new URLSearchParams({ seedIds: ids.join(',') });
+      return `${base}?${qs.toString()}`;
+    }
 
     return (
       <div className="rounded-lg border bg-white">
@@ -531,31 +551,28 @@ export default function DataQuality() {
                     {i.hint && <div className="text-xs text-gray-500">{i.hint}</div>}
                   </div>
                   <div className="flex items-center gap-2">
-                    {i.seedId != null && (
-                      <>
-                        <Link
-                          href={`/admin/seed_inventory`}
-                          className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
-                          title="Open inventory grid"
-                        >
-                          Inventory
-                        </Link>
-                        <Link
-                          href={`/admin/seed_pricing`}
-                          className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
-                          title="Open pricing grid"
-                        >
-                          Pricing
-                        </Link>
-                        <Link
-                          href={`/admin/seed_types`}
-                          className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
-                          title="Open seed grid"
-                        >
-                          Seed
-                        </Link>
-                      </>
-                    )}
+                    {/* Deep-links with filters */}
+                    <a
+                      href={buildUrl('/admin/seed_types', i.seedIds)}
+                      className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
+                      title="Open seeds filtered to these seeds"
+                    >
+                      Seed
+                    </a>
+                    <a
+                      href={buildUrl('/admin/seed_inventory', i.seedIds)}
+                      className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
+                      title="Open inventory filtered to these seeds"
+                    >
+                      Inventory
+                    </a>
+                    <a
+                      href={buildUrl('/admin/seed_pricing', i.seedIds)}
+                      className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
+                      title="Open pricing filtered to these seeds"
+                    >
+                      Pricing
+                    </a>
                     {i.action}
                   </div>
                 </li>
@@ -593,8 +610,8 @@ export default function DataQuality() {
 
       {seeds && (
         <>
-          <Section title="Media" items={grouped['Media']} />
           <Section title="Data Hygiene" items={grouped['Data Hygiene']} />
+          <Section title="Media" items={grouped['Media']} />
           <Section title="Inventory Attention" items={grouped['Inventory']} />
           <Section title="Pricing & Profit" items={grouped['Pricing & Profit']} />
         </>
