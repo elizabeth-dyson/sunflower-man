@@ -6,21 +6,7 @@ export default function BackButton() {
   return (
     <Link
       href="/admin"
-      style={{
-        position: 'absolute',
-        left: '1rem',
-        top: '1rem',
-        transform: 'translateY(-50%)',
-        color: '#1d4ed8',
-        fontWeight: 'bold',
-        textDecoration: 'none',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.textDecoration = 'underline';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.textDecoration = 'none';
-      }}
+      className="inline-flex items-center gap-1 text-blue-600 font-semibold hover:underline leading-none py-1"
     >
       ← Back to Dashboard
     </Link>

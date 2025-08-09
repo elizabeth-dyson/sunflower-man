@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import EditableInventoryGrid from '@/components/EditableInventoryGrid';
-import BackButton from '@/components/BackButton';
+import HeaderBar from '@/components/HeaderBar';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -22,11 +22,7 @@ export default async function InventoryPage() {
 
   return (
     <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
-      <BackButton />
-
-      <h1 className="text-4xl font-bold text-green-800 tracking-wide inline-block mb-6">
-        🌻 Seed Inventory
-      </h1>
+      <HeaderBar title="Seed Inventory" emoji="🌻" />
 
       <EditableInventoryGrid initialInventory={inventory} />
     </div>

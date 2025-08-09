@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from '@supabase/auth-helpers-react';
 import { useEffect } from 'react';
 import Link from 'next/link';
+import LogoutButton from '@/components/LogoutButton';
 
 export default function AdminDashboard() {
   const pages = [
@@ -25,6 +26,8 @@ export default function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <LogoutButton />
+      
       <h1 className="text-4xl font-bold text-green-800 text-center mb-10">
         🌱 Admin Dashboard
       </h1>

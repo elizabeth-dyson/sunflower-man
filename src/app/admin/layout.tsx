@@ -1,4 +1,3 @@
-import LogoutButton from '@/components/LogoutButton';
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -13,9 +12,6 @@ export default function AdminLayout({
 }) {
   return (
     <div className="p-4">
-      <div className="flex justify-end mb-4">
-        <LogoutButton />
-      </div>
       {children}
     </div>
   );

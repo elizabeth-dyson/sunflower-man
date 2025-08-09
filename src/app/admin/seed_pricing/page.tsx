@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import EditableSeedPricingGrid from '@/components/EditableSeedPricingGrid';
-import BackButton from '@/components/BackButton';
+import HeaderBar from '@/components/HeaderBar';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -22,11 +22,7 @@ export default async function PricingPage() {
 
   return (
     <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
-      <BackButton />
-
-      <h1 className="text-4xl font-bold text-green-800 text-center mb-6 tracking-wide">
-        🌻 Seed Costs & Prices
-      </h1>
+      <HeaderBar title="Seed Costs & Prices" emoji="🌻" />
 
       <EditableSeedPricingGrid initialPrices={prices} />
     </div>

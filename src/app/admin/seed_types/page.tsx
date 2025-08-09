@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import EditableSeedGrid from '@/components/EditableSeedGrid';
-import BackButton from '@/components/BackButton';
 import type { Metadata } from "next";
+import HeaderBar from '@/components/HeaderBar';
 
 export const metadata: Metadata = {
   title: 'Seed Types | Admin',
@@ -91,11 +91,7 @@ export default async function SeedsPage() {
 
   return (
     <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
-      <BackButton />
-
-      <h1 className="text-4xl font-bold text-green-800 tracking-wide inline-block mb-4">
-        🌻 Seed Types
-      </h1>
+      <HeaderBar title="Seed Types" emoji="🌻" />
 
       <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={names} sourceOptions={sources} sunlightOptions={sunlights} />
     </div>

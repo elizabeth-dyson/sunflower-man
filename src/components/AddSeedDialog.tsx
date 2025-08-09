@@ -283,11 +283,13 @@ export default function AddSeedDialog({
             error={!form.type}
             helperText={!form.type ? 'Type is required' : ''}
           >
-            {typeOptions.map((typ) => (
-              <MenuItem key={typ.id} value={typ.label}>
-                {typ.label}
-              </MenuItem>
-            ))}
+            {[...typeOptions]
+              .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
+              .map((typ) => (
+                <MenuItem key={typ.id} value={typ.label}>
+                  {typ.label}
+                </MenuItem>
+              ))}
           </TextField>
           <Button
             onClick={async () => {
@@ -316,11 +318,13 @@ export default function AddSeedDialog({
             error={!form.name}
             helperText={!form.name ? 'Name is required' : ''}
           >
-            {filteredNameOptions.map((nam) => (
-              <MenuItem key={nam.id} value={nam.label}>
-                {nam.label}
-              </MenuItem>
-            ))}
+            {[...filteredNameOptions]
+              .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
+              .map((nam) => (
+                <MenuItem key={nam.id} value={nam.label}>
+                  {nam.label}
+                </MenuItem>
+              ))}
           </TextField>
           <Button
             onClick={async () => {
