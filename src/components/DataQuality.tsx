@@ -97,7 +97,7 @@ type InventoryQuickEditProps = {
   }) => Promise<void>;
 };
 
-function InventoryQuickEdit({ seedId, initial, saving, onSave }: InventoryQuickEditProps) {
+function InventoryQuickEdit({ initial, saving, onSave }: InventoryQuickEditProps) {
   const [amt, setAmt] = useState<string>(initial.amount_per_packet?.toString() ?? '');
   const [num, setNum] = useState<string>(initial.number_packets?.toString() ?? '');
   const [yrs, setYrs] = useState<string>(initial.shelf_life_years?.toString() ?? '');
@@ -323,7 +323,7 @@ export default function DataQuality() {
     ];
     for (const s of seeds) {
       for (const f of required) {
-        const v = (s as any)[f];
+        const v = (s as Seed)[f];
         if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) {
           issues.push({
             key: `missing-${String(f)}-${s.id}`,

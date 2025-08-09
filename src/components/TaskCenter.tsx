@@ -20,9 +20,9 @@ const DEFAULT_LIMIT = 10;
 export default function TaskCenter() {
   const supabase = useSupabaseClient();
 
-  // Seeds (real from Supabase) – kept if you use elsewhere on page
-  const [seeds, setSeeds] = useState<Seed[] | null>(null);
-  const [seedError, setSeedError] = useState<string | null>(null);
+  // // Seeds (real from Supabase) – kept if you use elsewhere on page
+  // const [seeds, setSeeds] = useState<Seed[] | null>(null);
+  // const [seedError, setSeedError] = useState<string | null>(null);
 
   // CEO tasks (Supabase)
   const [ceoTasks, setCeoTasks] = useState<CeoTask[] | null>(null);
@@ -34,18 +34,18 @@ export default function TaskCenter() {
   const [notionError, setNotionError] = useState<string | null>(null);
   const [notionExpanded, setNotionExpanded] = useState(false);
 
-  // Load Seeds
-  useEffect(() => {
-    (async () => {
-      setSeedError(null);
-      const { data, error } = await supabase
-        .from('seeds')
-        .select('id,name,type')
-        .order('name', { ascending: true });
-      if (error) setSeedError(error.message);
-      else setSeeds(data as Seed[]);
-    })();
-  }, [supabase]);
+  // // Load Seeds
+  // useEffect(() => {
+  //   (async () => {
+  //     setSeedError(null);
+  //     const { data, error } = await supabase
+  //       .from('seeds')
+  //       .select('id,name,type')
+  //       .order('name', { ascending: true });
+  //     if (error) setSeedError(error.message);
+  //     else setSeeds(data as Seed[]);
+  //   })();
+  // }, [supabase]);
 
   // Load CEO tasks + realtime
   useEffect(() => {
@@ -69,9 +69,9 @@ export default function TaskCenter() {
             const list = cur ? [...cur] : [];
             if (payload.eventType === 'INSERT') return [payload.new as CeoTask, ...list];
             if (payload.eventType === 'UPDATE')
-              return list.map((t) => (t.id === (payload.new as any).id ? (payload.new as CeoTask) : t));
+              return list.map((t) => (t.id === (payload.new as CeoTask).id ? (payload.new as CeoTask) : t));
             if (payload.eventType === 'DELETE')
-              return list.filter((t) => t.id !== (payload.old as any).id);
+              return list.filter((t) => t.id !== (payload.old as CeoTask).id);
             return list;
           });
         }
@@ -91,8 +91,9 @@ export default function TaskCenter() {
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as { tasks: NotionTask[] };
         if (mounted) setNotionTasks(data.tasks);
-      } catch (e: any) {
-        if (mounted) setNotionError(e.message || 'Failed to load Notion tasks');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to load Notion tasks';
+        if (mounted) setNotionError(msg);
       }
     })();
     return () => {
