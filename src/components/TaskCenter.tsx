@@ -12,7 +12,7 @@ type NotionTask = {
   notes: string | null;
 };
 
-type Seed = { id: string; name: string; type: string | null };
+// type Seed = { id: string; name: string; type: string | null };
 type CeoTask = { id: string; title: string; done: boolean; created_at: string };
 
 const DEFAULT_LIMIT = 10;
