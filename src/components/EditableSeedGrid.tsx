@@ -34,7 +34,7 @@ type SeedType = {
   color: string;
   is_active: boolean;
   source: string;
-  image_url: string | null; // legacy single-image field (kept for compatibility)
+  // image_url removed from editing logic; DB may still have it but we ignore it here
   sunlight: string | null;
   plant_depth: string | null;
   plant_spacing: string | null;
@@ -54,9 +54,10 @@ type Props = {
 };
 
 type SeedImage = {
-  id: number;            // change to string if your table uses UUID
+  id: number;       // change to string if your seed_images.id is UUID
   seed_id: number;
-  image_url: string;
+  image_path: string; // <-- storage path like "seeds/400/1754566475105.png"
+  is_primary?: boolean | null;
 };
 
 export default function EditableSeedGrid({
@@ -68,6 +69,7 @@ export default function EditableSeedGrid({
   sunlightOptions,
 }: Props) {
   const supabase = createClient();
+  const bucket = 'seed-images';
 
   const [seeds, setSeeds] = useState<SeedType[]>(initialSeeds);
   const [searchText, setSearchText] = useState('');
@@ -82,11 +84,17 @@ export default function EditableSeedGrid({
   const [nameOptions, setNameOptions] = useState(initialNameOptions);
   const [sourceOptions, setSourceOptions] = useState(initialSourceOptions);
 
-  // --- MULTI-IMAGE STATE ---
-  // Map of seed_id -> array of images
+  // Map of seed_id -> array of images (with image_path)
   const [imagesMap, setImagesMap] = useState<Record<number, SeedImage[]>>({});
 
-  // Helpers to refresh option lists (unchanged behavior)
+  // Helpers to turn a storage path into a public URL for <img>
+  const toPublicUrl = (path?: string | null) => {
+    if (!path) return '';
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data?.publicUrl ?? '';
+  };
+
+  // Helpers to refresh option lists
   const refreshCategoryOptions = async () => {
     const { data, error } = await supabase.from('seeds_category_options').select('id, category');
     if (error) return console.error('Failed to refresh categories:', error.message);
@@ -111,10 +119,13 @@ export default function EditableSeedGrid({
     setSourceOptions(data.map((row) => ({ id: row.id, label: row.source })));
   };
 
-  // --- IMAGES: load all images once (you can scope to IDs if needed) ---
+  // Load images as paths from seed_images
   useEffect(() => {
     const fetchImages = async () => {
-      const { data, error } = await supabase.from('seed_images').select('id, seed_id, image_url');
+      const { data, error } = await supabase
+        .from('seed_images')
+        .select('id, seed_id, image_path, is_primary');
+
       if (error) {
         console.error('❌ Failed to fetch seed images:', error.message);
         return;
@@ -142,33 +153,24 @@ export default function EditableSeedGrid({
   const handleModalSave = async () => {
     if (!editForm || !editForm.id) return;
 
-    const { error } = await supabase.from('seeds').update(editForm).eq('id', editForm.id);
+    // Exclude any legacy image field from updates; we don't store image urls on seeds anymore
+    const {
+      id, // eslint-disable-line @typescript-eslint/no-unused-vars
+      ...payload
+    } = editForm;
+
+    const { error } = await supabase.from('seeds').update(payload).eq('id', editForm.id);
     if (error) {
       console.error('🔥 Supabase update error:', error.message, error.details);
     } else {
-      setSeeds((prev) => prev.map((s) => (s.id === editForm.id ? { ...s, ...editForm } as SeedType : s)));
+      setSeeds((prev) => prev.map((s) => (s.id === editForm.id ? { ...s, ...payload } as SeedType : s)));
     }
 
     setSelectedSeed(null);
     setEditForm(null);
   };
 
-  // ---------- MULTI IMAGE HELPERS ----------
-  const bucket = 'seed-images';
-
-  // Turn a public URL into a storage path (relative to the bucket)
-  const pathFromPublicUrl = (publicUrl: string) => {
-    try {
-      const u = new URL(publicUrl);
-      const marker = `/object/public/${bucket}/`;
-      const idx = u.pathname.indexOf(marker);
-      if (idx === -1) return null;
-      return u.pathname.substring(idx + marker.length);
-    } catch {
-      return null;
-    }
-  };
-
+  // Upload multiple images -> store DB rows with image_path only
   const handleUploadImages = async (seedId: number, files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -184,20 +186,16 @@ export default function EditableSeedGrid({
         continue;
       }
 
-      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
-      const publicUrl = pub?.publicUrl;
-      if (!publicUrl) continue;
-
-      // Insert DB row
+      // Insert DB row with image_path (not URL)
       const { data: inserted, error: insertErr } = await supabase
         .from('seed_images')
-        .insert({ seed_id: seedId, image_url: publicUrl })
-        .select('id, seed_id, image_url')
+        .insert({ seed_id: seedId, image_path: path })
+        .select('id, seed_id, image_path, is_primary')
         .single();
 
       if (insertErr || !inserted) {
         console.error('❌ DB insert failed:', insertErr?.message);
-        // try to rollback storage file if you want
+        // optional: rollback storage file
         continue;
       }
 
@@ -213,15 +211,10 @@ export default function EditableSeedGrid({
   };
 
   const handleDeleteImage = async (seedId: number, img: SeedImage) => {
-    // 1) Remove from storage
-    const path = pathFromPublicUrl(img.image_url);
-    if (!path) {
-      console.warn('Could not parse storage path from public URL, skipping storage delete.');
-    } else {
-      const { error: storageErr } = await supabase.storage.from(bucket).remove([path]);
-      if (storageErr) {
-        console.error('❌ Storage delete failed:', storageErr.message);
-      }
+    // 1) Remove from storage by path
+    const { error: storageErr } = await supabase.storage.from(bucket).remove([img.image_path]);
+    if (storageErr) {
+      console.error('❌ Storage delete failed:', storageErr.message);
     }
 
     // 2) Remove DB row
@@ -240,7 +233,6 @@ export default function EditableSeedGrid({
 
   const removeAllImagesForSeed = async (seedId: number) => {
     const folder = `seeds/${seedId}`;
-    // list returns items in the folder (no recursion), which is enough if you only store files at this level
     const { data: files, error: listErr } = await supabase.storage.from(bucket).list(folder);
     if (listErr) {
       console.error('❌ list() failed:', listErr.message);
@@ -267,7 +259,7 @@ export default function EditableSeedGrid({
       return;
     }
 
-    // ✅ remove all storage files under seeds/<seedId>/
+    // remove all storage files under seeds/<seedId>/
     await removeAllImagesForSeed(seedId);
 
     setSeeds((prev) => prev.filter((s) => s.id !== seedId));
@@ -275,7 +267,7 @@ export default function EditableSeedGrid({
     setEditForm(null);
   };
 
-  // ---------- DataGrid stuff ----------
+  // ---------- DataGrid setup ----------
   const renderCategoryEditInputCell = (
     params: GridRenderEditCellParams<SeedType, string>
   ) => {
@@ -311,7 +303,6 @@ export default function EditableSeedGrid({
       is_active: newRow.is_active,
       source: newRow.source,
       sunlight: newRow.sunlight,
-      image_url: newRow.image_url,
       color: newRow.color,
       plant_depth: newRow.plant_depth,
       plant_spacing: newRow.plant_spacing,
@@ -398,8 +389,7 @@ export default function EditableSeedGrid({
       return;
     }
 
-    // 4) upload all selected images
-    const bucket = 'seed-images';
+    // 4) upload all selected images -> store only image_path
     const newImages: SeedImage[] = [];
 
     for (const file of files) {
@@ -412,14 +402,10 @@ export default function EditableSeedGrid({
         continue;
       }
 
-      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
-      const publicUrl = pub?.publicUrl;
-      if (!publicUrl) continue;
-
       const { data: inserted, error: insertErr } = await supabase
         .from('seed_images')
-        .insert({ seed_id: seed.id, image_url: publicUrl })
-        .select('id, seed_id, image_url')
+        .insert({ seed_id: seed.id, image_path: path })
+        .select('id, seed_id, image_path, is_primary')
         .single();
 
       if (insertErr || !inserted) {
@@ -524,13 +510,14 @@ export default function EditableSeedGrid({
       renderEditCell: renderCategoryEditInputCell,
     } as GridColDef<SeedType, string>,
     {
-      field: 'image_url',
+      field: 'image', // purely for preview
       headerName: 'Image',
       width: 100,
-      editable: true,
+      editable: false,
       renderCell: (params) => {
-        const first = imagesMap[params.row.id]?.[0]?.image_url;
-        return first ? <img src={first} alt="seed" style={{ height: 40 }} /> : 'N/A';
+        const firstPath = imagesMap[params.row.id]?.[0]?.image_path;
+        const url = toPublicUrl(firstPath);
+        return firstPath ? <img src={url} alt="seed" style={{ height: 40 }} /> : 'N/A';
       },
     },
     { field: 'plant_depth', headerName: 'Plant Depth', width: 150, editable: true },
@@ -576,7 +563,7 @@ export default function EditableSeedGrid({
       console.error('❌ Delete failed:', error.message);
       alert('Delete failed: ' + error.message);
     } else {
-      // ✅ remove all storage files under seeds/<seedId>/
+      // remove all storage files under seeds/<seedId>/
       await removeAllImagesForSeed(seedId);
 
       setSeeds((prev) => prev.filter((s) => s.id !== seedId));
@@ -647,33 +634,37 @@ export default function EditableSeedGrid({
       {/* Gallery View */}
       {galleryMode ? (
         <Grid container spacing={2}>
-          {filteredSeeds.map((seed) => (
-            // @ts-expect-error MUI types are wrong here
-            <Grid item xs={12} sm={6} md={4} lg={3} key={seed.id}>
-              <Card onClick={() => openSeedModal(seed)} sx={{ cursor: 'pointer' }}>
-                <CardMedia
-                  component="img"
-                  image={imagesMap[seed.id]?.[0]?.image_url || '/placeholder.png'}
-                  alt={seed.name}
-                  sx={{
-                    width: '100%',
-                    height: 140,
-                    objectFit: 'cover',
-                    borderRadius: 1,
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.png';
-                  }}
-                />
-                <CardContent>
-                  <Typography variant="h6">{seed.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {seed.category} / {seed.type}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+          {filteredSeeds.map((seed) => {
+            const firstPath = imagesMap[seed.id]?.[0]?.image_path;
+            const imgUrl = toPublicUrl(firstPath);
+            return (
+              // @ts-expect-error MUI types are wrong here
+              <Grid item xs={12} sm={6} md={4} lg={3} key={seed.id}>
+                <Card onClick={() => openSeedModal(seed)} sx={{ cursor: 'pointer' }}>
+                  <CardMedia
+                    component="img"
+                    image={imgUrl || '/placeholder.png'}
+                    alt={seed.name}
+                    sx={{
+                      width: '100%',
+                      height: 140,
+                      objectFit: 'cover',
+                      borderRadius: 1,
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder.png';
+                    }}
+                  />
+                  <CardContent>
+                    <Typography variant="h6">{seed.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {seed.category} / {seed.type}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       ) : (
         // Table View
@@ -711,33 +702,36 @@ export default function EditableSeedGrid({
               </Box>
 
               <Box display="flex" flexWrap="wrap" gap={1}>
-                {(imagesMap[selectedSeed.id] || []).map((img) => (
-                  <Box
-                    key={img.id}
-                    position="relative"
-                    sx={{ width: 110, height: 90, borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd' }}
-                  >
-                    <img
-                      src={img.image_url}
-                      alt="Seed"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteImage(selectedSeed.id, img)}
-                      sx={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        bgcolor: 'rgba(255,255,255,0.8)',
-                        '&:hover': { bgcolor: 'white' },
-                      }}
-                      aria-label="Delete image"
+                {(imagesMap[selectedSeed.id] || []).map((img) => {
+                  const url = toPublicUrl(img.image_path);
+                  return (
+                    <Box
+                      key={img.id}
+                      position="relative"
+                      sx={{ width: 110, height: 90, borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd' }}
                     >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ))}
+                      <img
+                        src={url}
+                        alt="Seed"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteImage(selectedSeed.id, img)}
+                        sx={{
+                          position: 'absolute',
+                          top: 2,
+                          right: 2,
+                          bgcolor: 'rgba(255,255,255,0.8)',
+                          '&:hover': { bgcolor: 'white' },
+                        }}
+                        aria-label="Delete image"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  );
+                })}
               </Box>
             </Box>
           )}
@@ -745,9 +739,6 @@ export default function EditableSeedGrid({
           {/* Dynamic form fields */}
           {editForm &&
             Object.entries(editForm).map(([key, value]) => {
-              // Skip legacy single-image field from the dynamic list (we manage images above)
-              if (key === 'image_url') return null;
-
               let field: React.ReactNode = null;
 
               if (key === 'id' || key === 'sku') {
