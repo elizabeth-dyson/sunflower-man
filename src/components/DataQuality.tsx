@@ -874,8 +874,8 @@ export default function DataQuality() {
         seedId={purchaseSeedId}
         seedName={purchaseSeedName}
         onClose={() => setPurchaseSeedId(null)}
-        onDone={(newId) => {
-          // remove the “buy more” issue locally if you want
+        onDone={() => {
+          // you can refresh or adjust local state here if desired
           setPurchaseSeedId(null);
         }}
       />
