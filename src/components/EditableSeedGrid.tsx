@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DataGrid, GridColDef, GridFilterModel } from '@mui/x-data-grid';
 import { createClient } from '@/lib/supabaseClient';
 import AddSeedDialog from './AddSeedDialog';
@@ -85,6 +85,8 @@ export default function EditableSeedGrid({
   const [typeOptions, setTypeOptions] = useState(initialTypeOptions);
   const [nameOptions, setNameOptions] = useState(initialNameOptions);
   const [sourceOptions, setSourceOptions] = useState(initialSourceOptions);
+
+  const idSet = useMemo(() => new Set(initialSeedIds), [initialSeedIds]);
 
   // For the modal only (not the table)
   const modalNameOptions = (editForm?.category
@@ -371,8 +373,11 @@ export default function EditableSeedGrid({
     },
   ];
 
-  const filteredSeeds = seeds.filter((seed) =>
-    [
+  const filteredSeeds = seeds.filter((seed) => {
+    const matchesId = idSet.size ? idSet.has(seed.id) : true;
+    if (!matchesId) return false;
+
+    const hay = [
       seed.type,
       seed.category,
       seed.botanical_name,
@@ -383,8 +388,9 @@ export default function EditableSeedGrid({
       seed.plant_depth,
       seed.plant_spacing,
       seed.plant_height,
-    ].some((field) => field?.toLowerCase().includes(searchText.toLowerCase()))
-  );
+    ];
+    return hay.some((field) => field?.toLowerCase().includes(searchText.toLowerCase()));
+  });
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);

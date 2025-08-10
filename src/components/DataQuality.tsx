@@ -279,6 +279,66 @@ export default function DataQuality() {
     setSaving(null);
   }
 
+  // at top-level inside DataQuality component (next to updateInventory/updatePricing)
+  const bucket = 'seed-images';
+
+  async function uploadSeedImages(seedId: number, files: FileList | null) {
+    if (!files || !files.length) return;
+    const newImgs: SeedImage[] = [];
+
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `seeds/${seedId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file);
+      if (upErr) {
+        console.error('❌ Upload failed:', upErr.message);
+        continue;
+      }
+
+      const { data: inserted, error: dbErr } = await supabase
+        .from('seed_images')
+        .insert({ seed_id: seedId, image_path: path })
+        .select('id, seed_id, image_path')
+        .single();
+
+      if (!dbErr && inserted) newImgs.push(inserted as SeedImage);
+    }
+
+    if (newImgs.length) {
+      // append to current images state so the “missing pictures” issue falls away on next render
+      setImages((cur) => ([...(cur ?? []), ...newImgs]));
+    }
+  }
+
+  async function notifyMissing(kind: 'Inventory' | 'Pricing & Profit', seed: Seed) {
+    const title =
+      kind === 'Inventory'
+        ? `Add inventory row for "${seed.name}" (Seed ID ${seed.id})`
+        : `Add pricing row for "${seed.name}" (Seed ID ${seed.id})`;
+
+    const notes = [
+      `Seed ID: ${seed.id}`,
+      `Name: ${seed.name}`,
+      seed.category ? `Category: ${seed.category}` : null,
+      seed.type ? `Type: ${seed.type}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await fetch('/api/notion/create-task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        notes,
+        contentName: 'Admin Ops',      // or leave null / use a specific select value that exists
+        priority: 'High',              // optional
+        goalDate: null,                // optional
+      }),
+    });
+  }
+
   function SeedFieldQuickEdit({
     seed,
     missing,
@@ -375,7 +435,21 @@ export default function DataQuality() {
           kind: 'Media',
           seedId: s.id,
           seedIds: [s.id],
-          label: `Missing pictures — "${s.name}"`
+          label: `Missing pictures — "${s.name}"`,
+          action: (
+            <label className="inline-flex items-center gap-2 text-xs">
+              <span className="rounded-md border px-2 py-1 cursor-pointer hover:bg-gray-50">
+                Upload image(s)
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => uploadSeedImages(s.id, e.currentTarget.files)}
+              />
+            </label>
+          ),
         });
       }
     }
@@ -529,7 +603,15 @@ export default function DataQuality() {
           kind: 'Inventory',
           seedId: s.id,
           seedIds: [s.id],
-          label: `No inventory row — "${s.name}"`
+          label: `No inventory row — "${s.name}"`,
+          action: (
+            <button
+              onClick={() => notifyMissing('Inventory', s)}
+              className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
+            >
+              Notify
+            </button>
+          ),
         });
         continue;
       }
@@ -596,7 +678,7 @@ export default function DataQuality() {
               onClick={() => updateInventory(s.id, { buy_more: false }, key)}
               className="rounded-md bg-green-700 px-2 py-1 text-xs text-white hover:bg-green-800"
             >
-              Mark purchased
+              Record Purchase
             </button>
           )
         });
@@ -612,7 +694,15 @@ export default function DataQuality() {
           kind: 'Pricing & Profit',
           seedId: s.id,
           seedIds: [s.id],
-          label: `No pricing row — "${s.name}"`
+          label: `No pricing row — "${s.name}"`,
+          action: (
+            <button
+              onClick={() => notifyMissing('Pricing & Profit', s)}
+              className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
+            >
+              Notify
+            </button>
+          ),
         });
         continue;
       }
@@ -669,10 +759,33 @@ export default function DataQuality() {
     const visible = expanded ? items : items.slice(0, defaultLimit);
     const hiddenCount = Math.max(items.length - visible.length, 0);
 
-    function buildUrl(base: string, ids?: number[], extra?: Record<string, string>) {
+    function buildUrl(
+      base: string,
+      ids?: number[] | null,
+      extra?: Record<string, string | number | boolean | null | undefined>
+    ) {
       const qs = new URLSearchParams();
+
       if (ids && ids.length) qs.set('seedIds', ids.join(','));
-      if (extra) for (const [k, v] of Object.entries(extra)) qs.set(k, v);
+
+      if (extra) {
+        // special-case: map viewType (Issue.kind) -> view ('gallery'|'table')
+        if ('viewType' in extra) {
+          const k = String(extra.viewType);
+          const view = k === 'Media' ? 'gallery' : 'table';
+          qs.set('view', view);
+          // remove so we don't also set ?viewType=Media
+          const { viewType, ...rest } = extra as any;
+          for (const [rk, rv] of Object.entries(rest)) {
+            if (rv !== undefined && rv !== null && rv !== '') qs.set(rk, String(rv));
+          }
+        } else {
+          for (const [k, v] of Object.entries(extra)) {
+            if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+          }
+        }
+      }
+
       const suffix = qs.toString();
       return suffix ? `${base}?${suffix}` : base;
     }
@@ -700,7 +813,7 @@ export default function DataQuality() {
                   <div className="flex items-center gap-2">
                     {/* Deep-links with filters */}
                     <a
-                      href={buildUrl('/admin/seed_types', i.seedIds, { view: 'table' })}
+                      href={buildUrl('/admin/seed_types', i.seedIds, { viewType: i.kind })}
                       className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
                       title="Open seeds filtered to these seeds"
                     >
