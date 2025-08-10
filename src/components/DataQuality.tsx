@@ -68,6 +68,8 @@ type OverrideRow = {
   note: string | null;
 };
 
+type SunlightOpt = { id: number; sunlight: string };
+
 /** Small Levenshtein (near-duplicate finder) */
 function levenshtein(a: string, b: string) {
   if (a === b) return 0;
@@ -196,6 +198,7 @@ export default function DataQuality() {
   const [overrides, setOverrides] = useState<Record<string, OverrideRow>>({});
   const [purchaseSeedId, setPurchaseSeedId] = useState<number | null>(null);
   const [purchaseSeedName, setPurchaseSeedName] = useState<string | undefined>(undefined);
+  const [sunlightOpts, setSunlightOpts] = useState<string[]>([]);
 
   /** Load all data client-side (matches how your grids fetch) */
   useEffect(() => {
@@ -237,6 +240,13 @@ export default function DataQuality() {
         map[row.key] = row;
       }
       setOverrides(map);
+    })();
+  }, [supabase]);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from('seeds_sunlight_options').select('sunlight');
+      if (!error && data) setSunlightOpts((data as SunlightOpt[]).map(o => o.sunlight));
     })();
   }, [supabase]);
 
@@ -339,6 +349,13 @@ export default function DataQuality() {
         goalDate: null,                // optional
       }),
     });
+
+    const key = `${kind}:${seed.id}`;
+    await supabase
+      .from('data_quality_overrides')
+      .upsert({ kind: 'notified', key, seed_ids: [seed.id], ok: true }, { onConflict: 'kind,key' });
+
+    setOverrides(m => ({ ...m, [key]: { id: 0, kind: 'notified', key, seed_ids:[seed.id], ok:true, note:null }} as any));
   }
 
   function SeedFieldQuickEdit({
@@ -385,13 +402,24 @@ export default function DataQuality() {
         {renderFields.map((k) => (
           <div key={String(k)} className="flex items-center gap-1">
             <span className="text-xs text-gray-500">{label(String(k))}</span>
-            <input
-              type={isNumber(String(k)) ? 'number' : 'text'}
-              step={isNumber(String(k)) ? '1' : undefined}
-              className="w-32 rounded-md border px-2 py-1 text-xs"
-              value={values[k as string] ?? ''}
-              onChange={(e) => setValues((prev) => ({ ...prev, [k as string]: e.target.value }))}
-            />
+            {k === 'sunlight' ? (
+              <select
+                className="w-36 rounded-md border px-2 py-1 text-xs"
+                value={values.sunlight ?? ''}
+                onChange={(e) => setValues(p => ({ ...p, sunlight: e.target.value }))}
+              >
+                <option value=""></option>
+                {sunlightOpts.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            ) : (
+              <input
+                type={isNumber(String(k)) ? 'number' : 'text'}
+                step={isNumber(String(k)) ? '1' : undefined}
+                className="w-32 rounded-md border px-2 py-1 text-xs"
+                value={values[k as string] ?? ''}
+                onChange={(e) => setValues((prev) => ({ ...prev, [k as string]: e.target.value }))}
+              />
+            )}
           </div>
         ))}
 
@@ -599,6 +627,8 @@ export default function DataQuality() {
     // 3) Inventory Attention
     for (const s of seeds) {
       const inv = invBySeed.get(s.id);
+      const notifiedKey = `Inventory:${s.id}`;
+      const notified = overrides[`notified`]?.key === notifiedKey || overrides[notifiedKey]?.ok;
       if (!inv) {
         issues.push({
           key: `inv-none-${s.id}`,
@@ -606,11 +636,10 @@ export default function DataQuality() {
           seedId: s.id,
           seedIds: [s.id],
           label: `No inventory row — "${s.name}"`,
-          action: (
-            <button
-              onClick={() => notifyMissing('Inventory', s)}
-              className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
-            >
+          action: notified ? (
+            <span className="text-xs text-gray-500">Notified ✓</span>
+          ) : (
+            <button onClick={() => notifyMissing('Inventory', s)} className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700">
               Notify
             </button>
           ),
@@ -689,6 +718,8 @@ export default function DataQuality() {
     // 4) Pricing & Profit
     for (const s of seeds) {
       const pr = priceBySeed.get(s.id);
+      const notifiedKey = `Pricing & Profit:${s.id}`;
+      const notified = overrides[`notified`]?.key === notifiedKey || overrides[notifiedKey]?.ok;
       if (!pr) {
         issues.push({
           key: `pr-none-${s.id}`,
@@ -696,11 +727,10 @@ export default function DataQuality() {
           seedId: s.id,
           seedIds: [s.id],
           label: `No pricing row — "${s.name}"`,
-          action: (
-            <button
-              onClick={() => notifyMissing('Pricing & Profit', s)}
-              className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
-            >
+          action: notified ? (
+            <span className="text-xs text-gray-500">Notified ✓</span>
+          ) : (
+            <button onClick={() => notifyMissing('Pricing & Profit', s)} className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700">
               Notify
             </button>
           ),
