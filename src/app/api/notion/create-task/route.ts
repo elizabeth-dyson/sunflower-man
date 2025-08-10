@@ -1,23 +1,44 @@
+// src/app/api/notion/create-task/route.ts
 import { NextResponse } from 'next/server';
 import { Client } from '@notionhq/client';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const DB_ID = process.env.NOTION_TASK_TRACKER_ID!;
 
-/**
- * Body: { title: string; notes?: string; contentName?: string; goalDate?: string | null; priority?: 'High'|'Medium'|'Low'|null }
- */
+// --- minimal Notion types we use ---
+type NotionTitle = { title: { text: { content: string } }[] };
+type NotionRichText = { rich_text: { type: 'text'; text: { content: string } }[] };
+type NotionSelect = { select: { name: string } };
+type NotionDate = { date: { start: string } };
+
+type TaskPayload = {
+  Task: NotionTitle;
+  Notes?: NotionRichText;
+  'Goal Date'?: NotionDate;
+  Priority?: NotionSelect;
+  'Content Name'?: NotionSelect;
+};
+
+type ReqBody = {
+  title: string;
+  notes?: string | null;
+  contentName?: string | null;
+  goalDate?: string | null;
+  priority?: 'High' | 'Medium' | 'Low' | null;
+};
+
 export async function POST(req: Request) {
   try {
-    const { title, notes, contentName, goalDate, priority } = await req.json();
+    const { title, notes, contentName, goalDate, priority } = (await req.json()) as ReqBody;
 
-    // Build properties safely (these names must match your Notion DB)
-    const properties: Record<string, any> = {
-      Task: { title: [{ type: 'text', text: { content: String(title).slice(0, 2000) } }] },
+    const properties: TaskPayload = {
+      Task: { title: [{ text: { content: String(title).slice(0, 2000) } }] },
     };
 
     if (notes) {
-      properties.Notes = { rich_text: [{ type: 'text', text: { content: notes.slice(0, 2000) } }] };
+      properties.Notes = {
+        rich_text: [{ type: 'text', text: { content: String(notes).slice(0, 2000) } }],
+      };
     }
     if (goalDate) {
       properties['Goal Date'] = { date: { start: goalDate } };
@@ -25,17 +46,18 @@ export async function POST(req: Request) {
     if (priority) {
       properties.Priority = { select: { name: priority } };
     }
-    // If your "Content Name" is a select, this will work.
     if (contentName) {
       properties['Content Name'] = { select: { name: contentName } };
     }
-    // If you use Status property, set default:
-    properties.Status = { select: { name: 'Not started' } };
 
-    await notion.pages.create({ parent: { database_id: DB_ID }, properties });
+    await notion.pages.create({
+      parent: { database_id: DB_ID },
+      properties,
+    });
+
     return NextResponse.json({ ok: true });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Failed to create Notion task';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

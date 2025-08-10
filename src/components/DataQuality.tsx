@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import RecordPurchaseDialog from '@/components/RecordPurchaseDialog';
 import { createClient } from '@/lib/supabaseClient';
 
@@ -195,8 +194,6 @@ export default function DataQuality() {
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, OverrideRow>>({});
-
-  const router = useRouter();
   const [purchaseSeedId, setPurchaseSeedId] = useState<number | null>(null);
   const [purchaseSeedName, setPurchaseSeedName] = useState<string | undefined>(undefined);
 
@@ -355,11 +352,15 @@ export default function DataQuality() {
     missing: (keyof Seed)[];
     includeSku: boolean;
     saving: boolean;
-    onSave: (patch: Partial<Seed>) => Promise<void>;
+    onSave: (patch: Partial<Seed> & { sku?: string | null }) => Promise<void>;
   }) {
-    // initialize editable values only for fields we render
+    const seedMap = seed as unknown as Record<string, unknown>;
+
     const initial: Record<string, string> = {};
-    for (const f of missing) initial[f] = (seed as any)[f] == null ? '' : String((seed as any)[f]);
+    for (const f of missing) {
+      const v = seedMap[f as string];
+      initial[f as string] = v == null ? '' : String(v);
+    }
     if (includeSku) initial.sku = seed.sku ?? '';
 
     const [values, setValues] = useState<Record<string, string>>(initial);
@@ -368,12 +369,8 @@ export default function DataQuality() {
       (seed.type || '').toLowerCase() === 'pepper' ||
       (seed.name || '').toLowerCase().includes('pepper');
 
-    // Build the field list to render:
-    //  - optional SKU (only when it's weird)
-    //  - all missing required fields
-    //  - scoville if pepper & missing
     const renderFields: (keyof Seed | 'sku')[] = [];
-    if (includeSku) renderFields.push('sku');
+    if (includeSku) renderFields.push('sku' as const);
     renderFields.push(...missing);
     if (isPepper && (seed.scoville == null || Number.isNaN(seed.scoville))) {
       if (!renderFields.includes('scoville')) renderFields.push('scoville');
@@ -401,10 +398,10 @@ export default function DataQuality() {
         <button
           disabled={saving}
           onClick={() => {
-            const patch: Partial<Seed> = {};
+            const patch: Partial<Seed> & { sku?: string | null } = {};
             for (const [k, v] of Object.entries(values)) {
-              if (isNumber(k)) (patch as any)[k] = v === '' ? null : Number(v);
-              else (patch as any)[k] = v === '' ? null : v;
+              if (isNumber(k)) (patch as Record<string, unknown>)[k] = v === '' ? null : Number(v);
+              else (patch as Record<string, unknown>)[k] = v === '' ? null : v;
             }
             onSave(patch);
           }}
@@ -747,7 +744,7 @@ export default function DataQuality() {
       Inventory: issues.filter((i) => i.kind === 'Inventory'),
       'Pricing & Profit': issues.filter((i) => i.kind === 'Pricing & Profit')
     };
-  }, [seeds, images, inventory, pricing, saving, supabase]);
+  }, [seeds, images, inventory, pricing, saving, overrides]);
 
   function Section({
     title,
@@ -763,31 +760,22 @@ export default function DataQuality() {
     const visible = expanded ? items : items.slice(0, defaultLimit);
     const hiddenCount = Math.max(items.length - visible.length, 0);
 
-    function buildUrl(
-      base: string,
-      ids?: number[] | null,
-      extra?: Record<string, string | number | boolean | null | undefined>
-    ) {
+    type ExtraParams = Record<string, string | number | boolean | null | undefined> & {
+      viewType?: string;
+    };
+
+    function buildUrl(base: string, ids?: number[] | null, extra?: ExtraParams) {
       const qs = new URLSearchParams();
 
       if (ids && ids.length) qs.set('seedIds', ids.join(','));
 
-      if (extra) {
-        // special-case: map viewType (Issue.kind) -> view ('gallery'|'table')
-        if ('viewType' in extra) {
-          const k = String(extra.viewType);
-          const view = k === 'Media' ? 'gallery' : 'table';
-          qs.set('view', view);
-          // remove so we don't also set ?viewType=Media
-          const { viewType, ...rest } = extra as any;
-          for (const [rk, rv] of Object.entries(rest)) {
-            if (rv !== undefined && rv !== null && rv !== '') qs.set(rk, String(rv));
-          }
-        } else {
-          for (const [k, v] of Object.entries(extra)) {
-            if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
-          }
-        }
+      const { viewType, ...rest } = extra ?? {};
+      if (viewType) {
+        const view = viewType === 'Media' ? 'gallery' : 'table';
+        qs.set('view', view);
+      }
+      for (const [k, v] of Object.entries(rest)) {
+        if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
       }
 
       const suffix = qs.toString();
@@ -859,17 +847,6 @@ export default function DataQuality() {
     );
   }
 
-  <RecordPurchaseDialog
-    open={purchaseSeedId !== null}
-    seedId={purchaseSeedId}
-    seedName={purchaseSeedName}
-    onClose={() => setPurchaseSeedId(null)}
-    onDone={(newId) => {
-      // remove the “buy more” issue locally if you want
-      setPurchaseSeedId(null);
-    }}
-  />
-
   return (
     <section className="grid gap-6">
       <div className="flex items-center justify-between">
@@ -891,6 +868,17 @@ export default function DataQuality() {
           <Section title="Pricing & Profit" items={grouped['Pricing & Profit']} />
         </>
       )}
+
+      <RecordPurchaseDialog
+        open={purchaseSeedId !== null}
+        seedId={purchaseSeedId}
+        seedName={purchaseSeedName}
+        onClose={() => setPurchaseSeedId(null)}
+        onDone={(newId) => {
+          // remove the “buy more” issue locally if you want
+          setPurchaseSeedId(null);
+        }}
+      />
     </section>
   );
 }
