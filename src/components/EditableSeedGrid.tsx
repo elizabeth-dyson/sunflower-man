@@ -50,6 +50,7 @@ type Props = {
   sourceOptions: { id: number; label: string }[];
   sunlightOptions: { id: number; label: string }[];
   initialSeedIds: number[];
+  initialGalleryMode?: boolean;
 };
 
 type SeedImage = {
@@ -67,6 +68,7 @@ export default function EditableSeedGrid({
   sourceOptions: initialSourceOptions,
   sunlightOptions,
   initialSeedIds,
+  initialGalleryMode = true,
 }: Props) {
   const supabase = createClient();
   const bucket = 'seed-images';
@@ -75,7 +77,7 @@ export default function EditableSeedGrid({
   const [searchText, setSearchText] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const [galleryMode, setGalleryMode] = useState(true);
+  const [galleryMode, setGalleryMode] = useState<boolean>(initialGalleryMode);
   const [selectedSeed, setSelectedSeed] = useState<SeedType | null>(null);
   const [editForm, setEditForm] = useState<Partial<SeedType> | null>(null);
 
@@ -268,7 +270,7 @@ export default function EditableSeedGrid({
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 90, editable: false },
+    { field: 'id', headerName: 'ID', width: 90, editable: false, type: 'string' },
     { field: 'sku', headerName: 'SKU', width: 130, editable: false },
     {
       field: 'category',
@@ -477,14 +479,14 @@ export default function EditableSeedGrid({
 
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: initialSeedIds.length
-      ? [{ field: 'id', operator: 'isAnyOf', value: initialSeedIds }]
+      ? [{ field: 'id', operator: 'isAnyOf', value: initialSeedIds.map(String) }]
       : [],
   });
 
   useEffect(() => {
     if (initialSeedIds.length) {
       setFilterModel({
-        items: [{ field: 'id', operator: 'isAnyOf', value: initialSeedIds }],
+        items: [{ field: 'id', operator: 'isAnyOf', value: initialSeedIds.map(String) }],
       });
     }
   }, [initialSeedIds]);
@@ -605,17 +607,17 @@ export default function EditableSeedGrid({
         </Box>
       ) : (
         // Table View
-        <div style={{ height: '80vh', width: '100%' }}>
-          <DataGrid
-            rows={filteredSeeds}
-            columns={columns}
-            getRowId={(row) => row.id}
-            processRowUpdate={handleRowUpdate}
-            onProcessRowUpdateError={(err) => console.error(err)}
-            disableRowSelectionOnClick
-            filterModel={filterModel}
-            onFilterModelChange={setFilterModel}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <DataGrid
+              rows={filteredSeeds}
+              columns={columns}
+              getRowId={(row) => row.id}
+              processRowUpdate={handleRowUpdate}
+              onProcessRowUpdateError={(err) => console.error(err)}
+              disableRowSelectionOnClick
+              filterModel={filterModel}
+              onFilterModelChange={setFilterModel}
+            />
         </div>
       )}
 

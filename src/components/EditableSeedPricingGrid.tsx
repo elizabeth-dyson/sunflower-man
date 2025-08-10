@@ -87,7 +87,7 @@ export default function EditableSeedPricingGrid({
   };
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 90, editable: false },
+    { field: 'id', headerName: 'ID', width: 90, editable: false, type: 'string' },
     { field: 'seed_id', headerName: 'Seed ID', width: 130, editable: false },
     { field: 'inventory_id', headerName: 'Inventory ID', width: 130, editable: false },
     { field: 'category', headerName: 'Category', width: 130, editable: false },
@@ -161,14 +161,14 @@ export default function EditableSeedPricingGrid({
 
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: initialSeedIds.length
-      ? [{ field: 'seed_id', operator: 'isAnyOf', value: initialSeedIds }]
+      ? [{ field: 'seed_id', operator: 'isAnyOf', value: initialSeedIds.map(String) }]
       : [],
   });
 
   useEffect(() => {
     if (initialSeedIds.length) {
       setFilterModel({
-        items: [{ field: 'seed_id', operator: 'isAnyOf', value: initialSeedIds }],
+        items: [{ field: 'seed_id', operator: 'isAnyOf', value: initialSeedIds.map(String) }],
       });
     }
   }, [initialSeedIds]);
@@ -191,19 +191,19 @@ export default function EditableSeedPricingGrid({
         />
       </Box>
 
-      <div style={{ height: '80vh', width: '100%' }}>
-        <DataGrid
-          rows={filteredPrices}
-          columns={columns}
-          getRowId={(row) => row.id}
-          processRowUpdate={handleRowUpdate}
-          onProcessRowUpdateError={(error) => {
-            console.error('Row update error:', error);
-          }}
-          pageSizeOptions={[10, 25, 50]}
-          filterModel={filterModel}
-          onFilterModelChange={setFilterModel}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <DataGrid
+            rows={filteredPrices}
+            columns={columns}
+            getRowId={(row) => row.id}
+            processRowUpdate={handleRowUpdate}
+            onProcessRowUpdateError={(error) => {
+              console.error('Row update error:', error);
+            }}
+            pageSizeOptions={[10, 25, 50]}
+            filterModel={filterModel}
+            onFilterModelChange={setFilterModel}
+          />
       </div>
     </>
   );

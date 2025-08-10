@@ -59,6 +59,15 @@ type Issue = {
   action?: React.ReactNode;
 };
 
+type OverrideRow = {
+  id: number;
+  kind: string;
+  key: string;
+  seed_ids: number[];
+  ok: boolean;
+  note: string | null;
+};
+
 /** Small Levenshtein (near-duplicate finder) */
 function levenshtein(a: string, b: string) {
   if (a === b) return 0;
@@ -184,6 +193,7 @@ export default function DataQuality() {
   const [pricing, setPricing] = useState<Pricing[] | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, OverrideRow>>({});
 
   /** Load all data client-side (matches how your grids fetch) */
   useEffect(() => {
@@ -210,6 +220,40 @@ export default function DataQuality() {
     })();
   }, [supabase]);
 
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('data_quality_overrides')
+        .select('*')
+        .eq('kind', 'dup-name');
+      if (error) {
+        console.error('Overrides load failed:', error.message);
+        return;
+      }
+      const map: Record<string, OverrideRow> = {};
+      for (const row of (data ?? []) as OverrideRow[]) {
+        map[row.key] = row;
+      }
+      setOverrides(map);
+    })();
+  }, [supabase]);
+
+  async function toggleDupNameOk(key: string, seedIds: number[]) {
+    const current = overrides[key];
+    const ok = !current?.ok;
+    const payload = { kind: 'dup-name', key, seed_ids: seedIds, ok };
+    const { data, error } = await supabase
+      .from('data_quality_overrides')
+      .upsert(payload, { onConflict: 'kind,key' })
+      .select('*')
+      .single();
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setOverrides((m) => ({ ...m, [key]: data as OverrideRow }));
+  }
+
   /** Helpers for inline fixes */
   async function updateInventory(seedId: number, patch: Partial<Inventory>, key: string) {
     setSaving(key);
@@ -233,6 +277,78 @@ export default function DataQuality() {
       );
     }
     setSaving(null);
+  }
+
+  function SeedFieldQuickEdit({
+    seed,
+    missing,
+    includeSku,
+    saving,
+    onSave,
+  }: {
+    seed: Seed;
+    missing: (keyof Seed)[];
+    includeSku: boolean;
+    saving: boolean;
+    onSave: (patch: Partial<Seed>) => Promise<void>;
+  }) {
+    // initialize editable values only for fields we render
+    const initial: Record<string, string> = {};
+    for (const f of missing) initial[f] = (seed as any)[f] == null ? '' : String((seed as any)[f]);
+    if (includeSku) initial.sku = seed.sku ?? '';
+
+    const [values, setValues] = useState<Record<string, string>>(initial);
+
+    const isPepper =
+      (seed.type || '').toLowerCase() === 'pepper' ||
+      (seed.name || '').toLowerCase().includes('pepper');
+
+    // Build the field list to render:
+    //  - optional SKU (only when it's weird)
+    //  - all missing required fields
+    //  - scoville if pepper & missing
+    const renderFields: (keyof Seed | 'sku')[] = [];
+    if (includeSku) renderFields.push('sku');
+    renderFields.push(...missing);
+    if (isPepper && (seed.scoville == null || Number.isNaN(seed.scoville))) {
+      if (!renderFields.includes('scoville')) renderFields.push('scoville');
+      if (!('scoville' in values)) values.scoville = '';
+    }
+
+    const label = (k: string) => k.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const isNumber = (k: string) => ['days_to_germinate', 'days_to_bloom', 'scoville'].includes(k);
+
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {renderFields.map((k) => (
+          <div key={String(k)} className="flex items-center gap-1">
+            <span className="text-xs text-gray-500">{label(String(k))}</span>
+            <input
+              type={isNumber(String(k)) ? 'number' : 'text'}
+              step={isNumber(String(k)) ? '1' : undefined}
+              className="w-32 rounded-md border px-2 py-1 text-xs"
+              value={values[k as string] ?? ''}
+              onChange={(e) => setValues((prev) => ({ ...prev, [k as string]: e.target.value }))}
+            />
+          </div>
+        ))}
+
+        <button
+          disabled={saving}
+          onClick={() => {
+            const patch: Partial<Seed> = {};
+            for (const [k, v] of Object.entries(values)) {
+              if (isNumber(k)) (patch as any)[k] = v === '' ? null : Number(v);
+              else (patch as any)[k] = v === '' ? null : v;
+            }
+            onSave(patch);
+          }}
+          className="rounded-md bg-green-700 px-2 py-1 text-xs text-white hover:bg-green-800 disabled:opacity-60"
+        >
+          Save
+        </button>
+      </div>
+    );
   }
 
   /** Build issue lists */
@@ -275,12 +391,25 @@ export default function DataQuality() {
     for (const [norm, arr] of byName) {
       if (arr.length > 1) {
         const ids = arr.map((x) => x.id);
+        const ov = overrides[norm];
+        // if user marked OK, we can either hide or show muted; here we show but badge it
+        const key = `dup-name-${norm}`;
         issues.push({
-          key: `dup-name-${norm}`,
+          key,
           kind: 'Data Hygiene',
-          label: `Duplicate seed name "${arr[0].name}"`,
+          label: `Duplicate seed name "${arr[0].name}"${ov?.ok ? ' (OK ✔)' : ''}`,
           hint: `IDs: ${ids.join(', ')}`,
-          seedIds: ids,            // <-- include all IDs
+          seedIds: ids,
+          action: (
+            <button
+              onClick={() => toggleDupNameOk(norm, ids)}
+              className={`rounded-md px-2 py-1 text-xs ${
+                ov?.ok ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-amber-600 text-white hover:bg-amber-700'
+              }`}
+            >
+              {ov?.ok ? 'Unmark OK' : 'Mark as OK'}
+            </button>
+          ),
         });
       }
     }
@@ -314,7 +443,7 @@ export default function DataQuality() {
         }
       }
     }
-    // 2d) Required fields missing
+    // 2d–f) Collapsed missing fields per seed (with optional SKU + scoville)
     const required: (keyof Seed)[] = [
       'botanical_name',
       'source',
@@ -323,56 +452,72 @@ export default function DataQuality() {
       'plant_spacing',
       'days_to_germinate',
       'plant_height',
-      'days_to_bloom'
+      'days_to_bloom',
     ];
-    for (const s of seeds) {
-      for (const f of required) {
-        const v = (s as Seed)[f];
-        if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) {
-          issues.push({
-            key: `missing-${String(f)}-${s.id}`,
-            kind: 'Data Hygiene',
-            seedId: s.id,
-            seedIds: [s.id],
-            label: `Missing ${String(f).replaceAll('_', ' ')} — "${s.name}"`
-          });
-        }
-      }
-    }
-    // 2e) Peppers missing scoville
-    for (const s of seeds) {
-      const isPepper =
-        (s.type || '').toLowerCase() === 'pepper' ||
-        (s.name || '').toLowerCase().includes('pepper');
-      if (isPepper && (s.scoville == null || Number.isNaN(s.scoville))) {
-        issues.push({
-          key: `pepper-scoville-${s.id}`,
-          kind: 'Data Hygiene',
-          seedId: s.id,
-          seedIds: [s.id],
-          label: `Pepper missing Scoville — "${s.name}"`
-        });
-      }
-    }
-    // 2f) Weird SKUs (alnum-or-dash, len 6..12 without dashes)
+
     const skuLooksOk = (sku?: string | null) =>
       !!sku &&
       /^[A-Za-z0-9-]+$/.test(sku) &&
       (() => {
         const n = sku.replace(/-/g, '').length;
-        return n >= 6 && n <= 12;
+        return n == 9;
       })();
+
     for (const s of seeds) {
-      if (!skuLooksOk(s.sku)) {
-        issues.push({
-          key: `sku-${s.id}`,
-          kind: 'Data Hygiene',
-          seedId: s.id,
-          seedIds: [s.id],
-          label: `Weird or missing SKU — "${s.name}"`,
-          hint: s.sku ? `Current: ${s.sku}` : 'Missing'
-        });
+      // gather missing required fields for this seed
+      const missing: (keyof Seed)[] = [];
+      for (const f of required) {
+        const v = (s as Seed)[f];
+        if (v == null || (typeof v === 'string' && v.trim() === '')) missing.push(f);
       }
+
+      // determine if SKU is weird/missing
+      const skuWeird = !skuLooksOk(s.sku);
+
+      // determine if scoville is missing for peppers (we add it in the editor, not as a separate line)
+      const isPepper =
+        (s.type || '').toLowerCase() === 'pepper' ||
+        (s.name || '').toLowerCase().includes('pepper');
+      const scovilleMissing = isPepper && (s.scoville == null || Number.isNaN(s.scoville));
+
+      // if nothing to fix, skip
+      if (!missing.length && !skuWeird && !scovilleMissing) continue;
+
+      const key = `seed-missing-${s.id}`;
+
+      // Build a helpful hint text
+      const hints: string[] = [];
+      if (missing.length) hints.push(`Missing: ${missing.map((m) => String(m).replaceAll('_', ' ')).join(', ')}`);
+      if (skuWeird) hints.push(`SKU looks off`);
+      if (scovilleMissing) hints.push('Scoville required for peppers');
+
+      issues.push({
+        key,
+        kind: 'Data Hygiene',
+        seedId: s.id,
+        seedIds: [s.id],
+        label: `Missing/invalid fields — "${s.name}"`,
+        hint: hints.join(' • '),
+        action: (
+          <SeedFieldQuickEdit
+            seed={s}
+            missing={missing}
+            includeSku={skuWeird}            // 👈 only show SKU when it's weird
+            saving={saving === key}
+            onSave={async (patch) => {
+              setSaving(key);
+              const { error } = await supabase.from('seeds').update(patch).eq('id', s.id);
+              if (error) alert(error.message);
+              else {
+                setSeeds((cur) =>
+                  cur?.map((row) => (row.id === s.id ? { ...row, ...patch } as Seed : row)) || null
+                );
+              }
+              setSaving(null);
+            }}
+          />
+        ),
+      });
     }
 
     // 3) Inventory Attention
@@ -524,10 +669,12 @@ export default function DataQuality() {
     const visible = expanded ? items : items.slice(0, defaultLimit);
     const hiddenCount = Math.max(items.length - visible.length, 0);
 
-    function buildUrl(base: string, ids?: number[]) {
-      if (!ids || ids.length === 0) return base;
-      const qs = new URLSearchParams({ seedIds: ids.join(',') });
-      return `${base}?${qs.toString()}`;
+    function buildUrl(base: string, ids?: number[], extra?: Record<string, string>) {
+      const qs = new URLSearchParams();
+      if (ids && ids.length) qs.set('seedIds', ids.join(','));
+      if (extra) for (const [k, v] of Object.entries(extra)) qs.set(k, v);
+      const suffix = qs.toString();
+      return suffix ? `${base}?${suffix}` : base;
     }
 
     return (
@@ -553,7 +700,7 @@ export default function DataQuality() {
                   <div className="flex items-center gap-2">
                     {/* Deep-links with filters */}
                     <a
-                      href={buildUrl('/admin/seed_types', i.seedIds)}
+                      href={buildUrl('/admin/seed_types', i.seedIds, { view: 'table' })}
                       className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
                       title="Open seeds filtered to these seeds"
                     >

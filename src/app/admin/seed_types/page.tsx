@@ -21,7 +21,7 @@ function parseSeedIds(sp?: string | string[] | null): number[] {
 export default async function SeedsPage({
   searchParams,
 }: {
-  searchParams?: Promise< { seedIds?: string | string[] } >;
+  searchParams?: Promise< { seedIds?: string | string[]; view?: string | string[] } >;
 }) {
   const supabase = await createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
@@ -103,14 +103,27 @@ export default async function SeedsPage({
     label: row.sunlight,
   }));
 
-  const sp = (await searchParams)?.seedIds ?? null;
-  const seedIds = parseSeedIds(sp);
+  const sp = await searchParams;
+  const seedIds = parseSeedIds(sp?.seedIds ?? null);
+
+  const initialGalleryMode = !(
+    (Array.isArray(sp?.view) ? sp?.view[0] : sp?.view) === 'table'
+  )
 
   return (
     <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
       <HeaderBar title="Seed Types" emoji="🌻" />
 
-      <EditableSeedGrid initialSeeds={seeds} categoryOptions={categories} typeOptions={types} nameOptions={names} sourceOptions={sources} sunlightOptions={sunlights} initialSeedIds={seedIds} />
+      <EditableSeedGrid 
+        initialSeeds={seeds} 
+        categoryOptions={categories} 
+        typeOptions={types} 
+        nameOptions={names} 
+        sourceOptions={sources} 
+        sunlightOptions={sunlights} 
+        initialSeedIds={seedIds}
+        initialGalleryMode={initialGalleryMode} 
+      />
     </div>
   );
 }

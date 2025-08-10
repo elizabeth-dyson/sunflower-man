@@ -7,6 +7,7 @@ import {
   getDateStart,
   getRichText,
   NotionPage,
+  getSelectName,
 } from '@/lib/notionSafe';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ type OutTask = {
   goalDate: string | null;
   status: string | undefined;
   notes: string | null;
+  priority: string | undefined;
   url: string;
 };
 
@@ -29,7 +31,7 @@ export async function GET() {
 
     const res = await notion.databases.query({
       database_id: dbId,
-      sorts: [{ property: 'Goal Date', direction: 'ascending' }],
+      sorts: [{ property: 'Goal Date', direction: 'ascending' }, { property: 'Priority', direction: 'ascending' }],
       page_size: 100,
       filter: { property: 'Status', status: { does_not_equal: 'Done' } }, // change to select{} if needed
     });
@@ -44,6 +46,7 @@ export async function GET() {
         goalDate: getDateStart(p, 'Goal Date'),
         status: getStatusName(p, 'Status'),
         notes: getRichText(p, 'Notes'),
+        priority: getSelectName(p, 'Priority'),
         url: p.url,
       };
     });

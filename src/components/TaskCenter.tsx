@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 
 type NotionTask = {
@@ -10,10 +10,18 @@ type NotionTask = {
   goalDate: string | null;
   status: string;
   notes: string | null;
+  priority: string | null;
 };
 
 // type Seed = { id: string; name: string; type: string | null };
-type CeoTask = { id: string; title: string; done: boolean; created_at: string };
+
+type CeoTask = { 
+  id: string; 
+  title: string; 
+  done: boolean; 
+  created_at: string;
+  completed_at: string | null;
+};
 
 const DEFAULT_LIMIT = 10;
 
@@ -34,6 +42,36 @@ export default function TaskCenter() {
   const [notionError, setNotionError] = useState<string | null>(null);
   const [notionExpanded, setNotionExpanded] = useState(false);
 
+  // --- helpers (top of TaskCenter.tsx) ---
+  const priorityRank = (p?: string | null) =>
+    p === 'High' ? 0 : p === 'Medium' ? 1 : p === 'Low' ? 2 : 3; // unknowns last
+
+  // Sort helpers for Notion tasks
+  const massiveCustomSort = (a: NotionTask, b: NotionTask) => {
+    // Goal Date ascending; nulls last
+    const ad = a.goalDate ? new Date(a.goalDate).getTime() : Number.POSITIVE_INFINITY;
+    const bd = b.goalDate ? new Date(b.goalDate).getTime() : Number.POSITIVE_INFINITY;
+    if (ad !== bd) return ad - bd;
+
+    // Priority High -> Low
+    const ap = priorityRank(a.priority);
+    const bp = priorityRank(b.priority);
+    if (ap !== bp) return ap - bp;
+
+    // contentName: A→Z; null/empty go last
+    const ac = (a.contentName ?? '\uFFFF').toLocaleLowerCase();
+    const bc = (b.contentName ?? '\uFFFF').toLocaleLowerCase();
+    if (ac !== bc) return ac.localeCompare(bc);
+
+    // within a content group: task title A→Z (case-insensitive)
+    const at = (a.task ?? '').toLocaleLowerCase();
+    const bt = (b.task ?? '').toLocaleLowerCase();
+    if (at !== bt) return at.localeCompare(bt);
+
+    // Stable-ish fallback by title
+    return (a.task || '').localeCompare(b.task || '');
+  };
+
   // // Load Seeds
   // useEffect(() => {
   //   (async () => {
@@ -53,7 +91,7 @@ export default function TaskCenter() {
       setCeoError(null);
       const { data, error } = await supabase
         .from('ceo_tasks')
-        .select('id,title,done,created_at')
+        .select('id,title,done,created_at,completed_at')
         .order('created_at', { ascending: false });
       if (error) setCeoError(error.message);
       else setCeoTasks(data as CeoTask[]);
@@ -121,11 +159,37 @@ export default function TaskCenter() {
     if (error) setCeoError(error.message);
   }
 
-  const visibleCeo = ceoExpanded ? ceoTasks ?? [] : (ceoTasks ?? []).slice(0, DEFAULT_LIMIT);
-  const hiddenCeoCount = Math.max((ceoTasks?.length || 0) - visibleCeo.length, 0);
+  function PriorityBadge({ value }: { value: string | null }) {
+    const cls =
+      value === 'High'   ? 'bg-red-100 text-red-800' :
+      value === 'Medium' ? 'bg-amber-100 text-amber-800' :
+      value === 'Low'    ? 'bg-green-100 text-green-800' :
+      'bg-gray-100 text-gray-600';
+    return <span className={`rounded px-2 py-0.5 text-xs ${cls}`}>{value ?? '—'}</span>;
+  }
 
-  const visibleNotion = notionExpanded ? notionTasks ?? [] : (notionTasks ?? []).slice(0, DEFAULT_LIMIT);
-  const hiddenNotionCount = Math.max((notionTasks?.length || 0) - visibleNotion.length, 0);
+  // ---------- Visibility: hide done tasks after 24h ----------
+  const visibleCeoTasks = useMemo(() => {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    return (ceoTasks ?? []).filter((t) => {
+      if (!t.done) return true;                 // always show not-done
+      if (!t.completed_at) return true;         // safety for older rows
+      return now - new Date(t.completed_at).getTime() <= dayMs; // hide if older than 24h
+    });
+  }, [ceoTasks]);
+
+  // paginate from the filtered list
+  const visibleCeo = ceoExpanded ? visibleCeoTasks : visibleCeoTasks.slice(0, DEFAULT_LIMIT);
+  const hiddenCeoCount = Math.max(visibleCeoTasks.length - visibleCeo.length, 0);
+
+  const sortedNotion = useMemo(
+    () => (notionTasks ? [...notionTasks].sort(massiveCustomSort) : []),
+    [notionTasks]
+  );
+
+  const visibleNotion = notionExpanded ? sortedNotion ?? [] : (sortedNotion ?? []).slice(0, DEFAULT_LIMIT);
+  const hiddenNotionCount = Math.max((sortedNotion?.length || 0) - visibleNotion.length, 0);
 
   return (
     <section className="mx-auto grid max-w-5xl gap-8 px-4 pb-12">
@@ -152,7 +216,7 @@ export default function TaskCenter() {
           </button>
         </form>
 
-        {!ceoTasks && !ceoError && <p className="text-sm text-gray-500">Loading…</p>}
+        {!visibleCeoTasks && !ceoError && <p className="text-sm text-gray-500">Loading…</p>}
 
         <ul className="divide-y">
           {visibleCeo.map((t) => (
@@ -176,7 +240,7 @@ export default function TaskCenter() {
               </button>
             </li>
           ))}
-          {ceoTasks?.length === 0 && <li className="py-2 text-sm text-gray-500">No tasks yet.</li>}
+          {visibleCeoTasks?.length === 0 && <li className="py-2 text-sm text-gray-500">No tasks yet.</li>}
         </ul>
 
         {(hiddenCeoCount > 0 || ceoExpanded) && (
@@ -221,6 +285,36 @@ export default function TaskCenter() {
                 <div className="shrink-0 text-xs text-gray-500 text-right">
                   <span>{t.status ? `Status: ${t.status}` : 'Status: —'}</span>
                   {t.goalDate && <span> • Goal Date: {new Date(t.goalDate).toLocaleDateString()}</span>}
+                </div>
+                <div className="shrink-0 text-xs text-right flex items-center gap-2">
+                  <PriorityBadge value={t.priority} />
+                  <select
+                    value={t.priority ?? ''}
+                    onChange={async (e) => {
+                      const next = e.currentTarget.value || null;
+
+                      // optimistic local update (the memo will re-sort)
+                      setNotionTasks((cur) =>
+                        cur?.map((nt) => (nt.id === t.id ? { ...nt, priority: next } : nt)) ?? null
+                      );
+
+                      // persist to Notion (errors can roll back if you want)
+                      await fetch('/api/notion/update-priority', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: t.id, priority: next }),
+                      }).catch(() => {
+                        // optional rollback:
+                        // setNotionTasks(cur => cur?.map(nt => nt.id===t.id ? {...nt, priority: t.priority} : nt) ?? null);
+                      });
+                    }}
+                    className="rounded border px-1 py-0.5 text-xs"
+                  >
+                    <option value="">—</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
                 </div>
               </div>
             </li>
