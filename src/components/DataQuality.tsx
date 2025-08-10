@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import RecordPurchaseDialog from '@/components/RecordPurchaseDialog';
 import { createClient } from '@/lib/supabaseClient';
 
 /** ===== Types inferred from your grids ===== */
@@ -194,6 +195,10 @@ export default function DataQuality() {
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, OverrideRow>>({});
+
+  const router = useRouter();
+  const [purchaseSeedId, setPurchaseSeedId] = useState<number | null>(null);
+  const [purchaseSeedName, setPurchaseSeedName] = useState<string | undefined>(undefined);
 
   /** Load all data client-side (matches how your grids fetch) */
   useEffect(() => {
@@ -674,13 +679,12 @@ export default function DataQuality() {
           label: `Buy more flagged — "${s.name}"`,
           action: (
             <button
-              disabled={saving === key}
-              onClick={() => updateInventory(s.id, { buy_more: false }, key)}
-              className="rounded-md bg-green-700 px-2 py-1 text-xs text-white hover:bg-green-800"
+              onClick={() => { setPurchaseSeedId(s.id); setPurchaseSeedName(s.name); }}
+              className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
             >
-              Record Purchase
+              Record purchase
             </button>
-          )
+          ),
         });
       }
     }
@@ -854,6 +858,17 @@ export default function DataQuality() {
       </div>
     );
   }
+
+  <RecordPurchaseDialog
+    open={purchaseSeedId !== null}
+    seedId={purchaseSeedId}
+    seedName={purchaseSeedName}
+    onClose={() => setPurchaseSeedId(null)}
+    onDone={(newId) => {
+      // remove the “buy more” issue locally if you want
+      setPurchaseSeedId(null);
+    }}
+  />
 
   return (
     <section className="grid gap-6">
