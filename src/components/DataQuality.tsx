@@ -355,7 +355,7 @@ export default function DataQuality() {
       .from('data_quality_overrides')
       .upsert({ kind: 'notified', key, seed_ids: [seed.id], ok: true }, { onConflict: 'kind,key' });
 
-    setOverrides(m => ({ ...m, [key]: { id: 0, kind: 'notified', key, seed_ids:[seed.id], ok:true, note:null }} as any));
+    setOverrides(m => ({ ...m, [key]: { id: 0, kind: 'notified', key, seed_ids:[seed.id], ok:true, note:null }} as { string : OverrideRow }));
   }
 
   function SeedFieldQuickEdit({
