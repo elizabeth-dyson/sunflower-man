@@ -230,7 +230,7 @@ export default function DataQuality() {
       const { data, error } = await supabase
         .from('data_quality_overrides')
         .select('*')
-        .eq('kind', 'dup-name');
+        .in('kind', ['dup-name', 'notified']);
       if (error) {
         console.error('Overrides load failed:', error.message);
         return;
@@ -355,7 +355,10 @@ export default function DataQuality() {
       .from('data_quality_overrides')
       .upsert({ kind: 'notified', key, seed_ids: [seed.id], ok: true }, { onConflict: 'kind,key' });
 
-    setOverrides(m => ({ ...m, [key]: { id: 0, kind: 'notified', key, seed_ids:[seed.id], ok:true, note:null }} as { string : OverrideRow }));
+    setOverrides(m => ({
+      ...m,
+      [key]: { id: (m[key]?.id ?? 0), kind: 'notified', key, seed_ids: [seed.id], ok: true, note: null }
+    }));
   }
 
   function SeedFieldQuickEdit({
@@ -628,7 +631,7 @@ export default function DataQuality() {
     for (const s of seeds) {
       const inv = invBySeed.get(s.id);
       const notifiedKey = `Inventory:${s.id}`;
-      const notified = overrides[`notified`]?.key === notifiedKey || overrides[notifiedKey]?.ok;
+      const notified = !!overrides[notifiedKey]?.ok;
       if (!inv) {
         issues.push({
           key: `inv-none-${s.id}`,
@@ -904,7 +907,7 @@ export default function DataQuality() {
         seedId={purchaseSeedId}
         seedName={purchaseSeedName}
         onClose={() => setPurchaseSeedId(null)}
-        onDone={() => {
+        onCreated={() => {
           // you can refresh or adjust local state here if desired
           setPurchaseSeedId(null);
         }}
