@@ -6,6 +6,7 @@ import {
   TextField, Button, MenuItem, Box
 } from '@mui/material';
 import { createClient } from '@/lib/supabaseClient';
+import { NextResponse } from 'next/server';
 
 type Props = {
   open: boolean;
@@ -28,7 +29,6 @@ export default function RecordPurchaseDialog({ open, seedId, seedName, onClose, 
   const [seedCost, setSeedCost] = useState<string>('');   // number string
   const [retailPrice, setRetailPrice] = useState<string>(''); // number string
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -85,8 +85,9 @@ export default function RecordPurchaseDialog({ open, seedId, seedName, onClose, 
       const newSeedId = Number(json?.seedId);
       onCreated?.(newSeedId);
       onClose();
-    } catch (e:any) {
-      alert(e.message || 'Failed to create new lot');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to create new lot';
+      return NextResponse.json<{ error: string }>({ error: message }, { status: 400 });
     } finally {
       setSaving(false);
     }
