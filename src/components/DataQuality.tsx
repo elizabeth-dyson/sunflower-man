@@ -843,35 +843,44 @@ export default function DataQuality() {
           <>
             <ul className="divide-y divide-[#edf3ed]">
               {visible.map((i) => (
-                <li key={i.key} className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-[#f8faf8] group">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-[#1a2e1a]">{i.label}</div>
-                    {i.hint && <div className="mt-0.5 text-xs text-[#7a917a]">{i.hint}</div>}
+                <li key={i.key} className="px-5 py-3 transition-colors hover:bg-[#f8faf8] group">
+                  {/* Top row: label + nav links */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-[#1a2e1a]">{i.label}</div>
+                      {i.hint && <div className="mt-0.5 text-xs text-[#7a917a]">{i.hint}</div>}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={buildUrl('/admin/seed_types', i.seedIds, { viewType: i.kind })}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
+                        title="Open seeds filtered to these seeds"
+                      >
+                        Seed
+                      </a>
+                      <a
+                        href={buildUrl('/admin/seed_inventory', i.seedIds)}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
+                        title="Open inventory filtered to these seeds"
+                      >
+                        Inv
+                      </a>
+                      <a
+                        href={buildUrl('/admin/seed_pricing', i.seedIds)}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
+                        title="Open pricing filtered to these seeds"
+                      >
+                        Price
+                      </a>
+                      {!i.action && null}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <a
-                      href={buildUrl('/admin/seed_types', i.seedIds, { viewType: i.kind })}
-                      className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
-                      title="Open seeds filtered to these seeds"
-                    >
-                      Seed
-                    </a>
-                    <a
-                      href={buildUrl('/admin/seed_inventory', i.seedIds)}
-                      className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
-                      title="Open inventory filtered to these seeds"
-                    >
-                      Inv
-                    </a>
-                    <a
-                      href={buildUrl('/admin/seed_pricing', i.seedIds)}
-                      className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
-                      title="Open pricing filtered to these seeds"
-                    >
-                      Price
-                    </a>
-                    {i.action}
-                  </div>
+                  {/* Action row: sits below the label so it has full width */}
+                  {i.action && (
+                    <div className="mt-2">
+                      {i.action}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
