@@ -120,7 +120,7 @@ function InventoryQuickEdit({ initial, saving, onSave }: InventoryQuickEditProps
         type="number"
         inputMode="decimal"
         placeholder="amt/packet"
-        className="w-24 rounded-md border px-2 py-1 text-xs"
+        className="w-24 rounded-lg border border-[#d4ddd4] bg-[#f8faf8] px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-[#2e7d32] focus:ring-1 focus:ring-[#2e7d32]/20"
         value={amt}
         onChange={(e) => setAmt(e.target.value)}
       />
@@ -128,7 +128,7 @@ function InventoryQuickEdit({ initial, saving, onSave }: InventoryQuickEditProps
         type="number"
         inputMode="numeric"
         placeholder="# packets"
-        className="w-24 rounded-md border px-2 py-1 text-xs"
+        className="w-24 rounded-lg border border-[#d4ddd4] bg-[#f8faf8] px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-[#2e7d32] focus:ring-1 focus:ring-[#2e7d32]/20"
         value={num}
         onChange={(e) => setNum(e.target.value)}
       />
@@ -136,7 +136,7 @@ function InventoryQuickEdit({ initial, saving, onSave }: InventoryQuickEditProps
         type="number"
         inputMode="numeric"
         placeholder="shelf yrs"
-        className="w-24 rounded-md border px-2 py-1 text-xs"
+        className="w-24 rounded-lg border border-[#d4ddd4] bg-[#f8faf8] px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-[#2e7d32] focus:ring-1 focus:ring-[#2e7d32]/20"
         value={yrs}
         onChange={(e) => setYrs(e.target.value)}
       />
@@ -149,7 +149,7 @@ function InventoryQuickEdit({ initial, saving, onSave }: InventoryQuickEditProps
             shelf_life_years: yrs === '' ? null : Number(yrs),
           })
         }
-        className="rounded-md bg-green-700 px-2 py-1 text-xs text-white hover:bg-green-800 disabled:opacity-60"
+        className="rounded-lg bg-[#2e7d32] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#1b5e20] disabled:opacity-60"
       >
         Save
       </button>
@@ -171,14 +171,14 @@ function PricingQuickEdit({ initial, saving, onSave }: PricingQuickEditProps) {
         type="number"
         step="0.01"
         placeholder="$"
-        className="w-24 rounded-md border px-2 py-1 text-xs"
+        className="w-24 rounded-lg border border-[#d4ddd4] bg-[#f8faf8] px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-[#2e7d32] focus:ring-1 focus:ring-[#2e7d32]/20"
         value={val}
         onChange={(e) => setVal(e.target.value)}
       />
       <button
         disabled={saving}
         onClick={() => onSave(val === '' ? null : Number(val))}
-        className="rounded-md bg-green-700 px-2 py-1 text-xs text-white hover:bg-green-800 disabled:opacity-60"
+        className="rounded-lg bg-[#2e7d32] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#1b5e20] disabled:opacity-60"
       >
         Save
       </button>
@@ -404,10 +404,10 @@ export default function DataQuality() {
       <div className="flex flex-wrap items-center gap-2">
         {renderFields.map((k) => (
           <div key={String(k)} className="flex items-center gap-1">
-            <span className="text-xs text-gray-500">{label(String(k))}</span>
+            <span className="text-xs font-medium text-[#546e54]">{label(String(k))}</span>
             {k === 'sunlight' ? (
               <select
-                className="w-36 rounded-md border px-2 py-1 text-xs"
+                className="w-36 rounded-lg border border-[#d4ddd4] bg-[#f8faf8] px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-[#2e7d32]"
                 value={values.sunlight ?? ''}
                 onChange={(e) => setValues(p => ({ ...p, sunlight: e.target.value }))}
               >
@@ -418,7 +418,7 @@ export default function DataQuality() {
               <input
                 type={isNumber(String(k)) ? 'number' : 'text'}
                 step={isNumber(String(k)) ? '1' : undefined}
-                className="w-32 rounded-md border px-2 py-1 text-xs"
+                className="w-32 rounded-lg border border-[#d4ddd4] bg-[#f8faf8] px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-[#2e7d32] focus:ring-1 focus:ring-[#2e7d32]/20"
                 value={values[k as string] ?? ''}
                 onChange={(e) => setValues((prev) => ({ ...prev, [k as string]: e.target.value }))}
               />
@@ -436,7 +436,7 @@ export default function DataQuality() {
             }
             onSave(patch);
           }}
-          className="rounded-md bg-green-700 px-2 py-1 text-xs text-white hover:bg-green-800 disabled:opacity-60"
+          className="rounded-lg bg-[#2e7d32] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#1b5e20] disabled:opacity-60"
         >
           Save
         </button>
@@ -471,8 +471,8 @@ export default function DataQuality() {
           label: `Missing pictures — "${s.name}"`,
           action: (
             <label className="inline-flex items-center gap-2 text-xs">
-              <span className="rounded-md border px-2 py-1 cursor-pointer hover:bg-gray-50">
-                Upload image(s)
+              <span className="rounded-lg border border-[#c8d6c8] px-3 py-1.5 cursor-pointer font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9] hover:border-[#2e7d32]">
+                Upload
               </span>
               <input
                 type="file"
@@ -510,8 +510,10 @@ export default function DataQuality() {
           action: (
             <button
               onClick={() => toggleDupNameOk(norm, ids)}
-              className={`rounded-md px-2 py-1 text-xs ${
-                ov?.ok ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-amber-600 text-white hover:bg-amber-700'
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                ov?.ok
+                  ? 'border border-[#d4ddd4] bg-[#f0f5f0] text-[#546e54] hover:bg-[#e0e8e0]'
+                  : 'bg-amber-600 text-white shadow-sm hover:bg-amber-700'
               }`}
             >
               {ov?.ok ? 'Unmark OK' : 'Mark as OK'}
@@ -640,9 +642,9 @@ export default function DataQuality() {
           seedIds: [s.id],
           label: `No inventory row — "${s.name}"`,
           action: notified ? (
-            <span className="text-xs text-gray-500">Notified ✓</span>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">Notified</span>
           ) : (
-            <button onClick={() => notifyMissing('Inventory', s)} className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700">
+            <button onClick={() => notifyMissing('Inventory', s)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-amber-700">
               Notify
             </button>
           ),
@@ -690,7 +692,7 @@ export default function DataQuality() {
               <button
                 disabled={saving === key}
                 onClick={() => updateInventory(s.id, { expiration_date: null }, key)}
-                className="rounded-md border px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-[#d4ddd4] px-3 py-1.5 text-xs font-medium text-[#546e54] transition-colors hover:bg-[#f1f8f1] hover:border-[#2e7d32] disabled:opacity-60"
               >
                 Clear date
               </button>
@@ -709,7 +711,7 @@ export default function DataQuality() {
           action: (
             <button
               onClick={() => { setPurchaseSeedId(s.id); setPurchaseSeedName(s.name); }}
-              className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-amber-700"
             >
               Record purchase
             </button>
@@ -731,9 +733,9 @@ export default function DataQuality() {
           seedIds: [s.id],
           label: `No pricing row — "${s.name}"`,
           action: notified ? (
-            <span className="text-xs text-gray-500">Notified ✓</span>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">Notified</span>
           ) : (
-            <button onClick={() => notifyMissing('Pricing & Profit', s)} className="rounded-md bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700">
+            <button onClick={() => notifyMissing('Pricing & Profit', s)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-amber-700">
               Notify
             </button>
           ),
@@ -815,48 +817,58 @@ export default function DataQuality() {
       return suffix ? `${base}?${suffix}` : base;
     }
 
+    const sectionColor =
+      title === 'Data Hygiene' ? 'from-blue-600 to-blue-500' :
+      title === 'Media' ? 'from-purple-600 to-purple-500' :
+      title === 'Inventory Attention' ? 'from-amber-700 to-amber-500' :
+      'from-emerald-700 to-emerald-500';
+
+    const countBg =
+      items.length === 0 ? 'bg-white/30 text-white' : 'bg-white/25 text-white';
+
     return (
-      <div className="rounded-lg border bg-white">
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <h3 className="text-base font-semibold">{title}</h3>
-          <span className="text-xs text-gray-500">
+      <div className="overflow-hidden rounded-xl border border-[#e0e8e0] bg-white shadow-sm">
+        <div className={`flex items-center justify-between border-b border-[#e0e8e0] bg-gradient-to-r ${sectionColor} px-5 py-2.5`}>
+          <h3 className="text-sm font-bold text-white">{title}</h3>
+          <span className={`rounded-full ${countBg} px-2.5 py-0.5 text-xs font-semibold`}>
             {items.length} item{items.length === 1 ? '' : 's'}
           </span>
         </div>
 
         {items.length === 0 ? (
-          <div className="px-4 py-3 text-sm text-gray-500">No issues 🎉</div>
+          <div className="px-5 py-4 text-center text-sm text-[#7a917a]">
+            No issues found - looking good!
+          </div>
         ) : (
           <>
-            <ul className="divide-y">
+            <ul className="divide-y divide-[#edf3ed]">
               {visible.map((i) => (
-                <li key={i.key} className="flex items-center justify-between gap-3 px-4 py-2">
+                <li key={i.key} className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-[#f8faf8] group">
                   <div className="min-w-0">
-                    <div className="text-sm text-gray-800">{i.label}</div>
-                    {i.hint && <div className="text-xs text-gray-500">{i.hint}</div>}
+                    <div className="text-sm font-medium text-[#1a2e1a]">{i.label}</div>
+                    {i.hint && <div className="mt-0.5 text-xs text-[#7a917a]">{i.hint}</div>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {/* Deep-links with filters */}
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <a
                       href={buildUrl('/admin/seed_types', i.seedIds, { viewType: i.kind })}
-                      className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
+                      className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
                       title="Open seeds filtered to these seeds"
                     >
                       Seed
                     </a>
                     <a
                       href={buildUrl('/admin/seed_inventory', i.seedIds)}
-                      className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
+                      className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
                       title="Open inventory filtered to these seeds"
                     >
-                      Inventory
+                      Inv
                     </a>
                     <a
                       href={buildUrl('/admin/seed_pricing', i.seedIds)}
-                      className="rounded-md px-2 py-1 text-xs text-green-800 hover:bg-green-50"
+                      className="rounded-md px-2.5 py-1 text-xs font-medium text-[#2e7d32] transition-colors hover:bg-[#e8f5e9]"
                       title="Open pricing filtered to these seeds"
                     >
-                      Pricing
+                      Price
                     </a>
                     {i.action}
                   </div>
@@ -865,12 +877,12 @@ export default function DataQuality() {
             </ul>
 
             {(hiddenCount > 0 || expanded) && (
-              <div className="px-4 py-2">
+              <div className="border-t border-[#edf3ed] px-5 py-2.5">
                 <button
                   onClick={() => setExpanded((v) => !v)}
-                  className="text-xs text-green-800 hover:underline"
+                  className="text-xs font-medium text-[#2e7d32] transition-colors hover:text-[#1b5e20] hover:underline"
                 >
-                  {expanded ? 'Show less' : `Show more (${hiddenCount})`}
+                  {expanded ? 'Show less' : `Show ${hiddenCount} more`}
                 </button>
               </div>
             )}
@@ -883,13 +895,21 @@ export default function DataQuality() {
   return (
     <section className="grid gap-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-amber-900">Data Quality</h2>
-        {error && <span className="text-xs text-red-700">Error: {error}</span>}
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-[#1b5e20]">Data Quality</h2>
+          <p className="mt-0.5 text-xs text-[#7a917a]">Automated checks across your seed catalog</p>
+        </div>
+        {error && (
+          <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200">
+            Error: {error}
+          </span>
+        )}
       </div>
 
       {!seeds && !error && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Loading checks…
+        <div className="rounded-xl border border-[#e0e8e0] bg-[#f8faf8] p-5 text-center text-sm text-[#546e54]">
+          <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[#2e7d32] border-t-transparent mr-2 align-middle" />
+          Running quality checks...
         </div>
       )}
 

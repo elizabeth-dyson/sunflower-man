@@ -111,7 +111,7 @@ export default async function SeedsPage({
   )
 
   return (
-    <div style={{ position: 'relative', padding: '1rem', textAlign: 'center' }}>
+    <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem 3rem' }}>
       <HeaderBar title="Seed Types" emoji="🌻" />
 
       <EditableSeedGrid 

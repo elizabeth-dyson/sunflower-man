@@ -175,23 +175,56 @@ export default function EditableSeedPricingGrid({
 
   return (
     <>
-      <Box display="flex" justifyContent="center" mb={2}>
-        <input
-          type="text"
-          placeholder="Search prices..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{
-            padding: '0.5rem',
-            fontSize: '1rem',
-            width: '300px',
-            borderRadius: '4px',
-            border: '1px solid #ccc',
-          }}
-        />
+      <Box display="flex" justifyContent="center" mb={4}>
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Box
+            component="svg"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#7a917a"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            sx={{
+              position: 'absolute',
+              left: 14,
+              width: 16,
+              height: 16,
+              pointerEvents: 'none',
+            }}
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </Box>
+          <input
+            type="text"
+            placeholder="Search prices..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{
+              padding: '10px 16px 10px 42px',
+              fontSize: '0.875rem',
+              width: 380,
+              borderRadius: '10px',
+              border: '1px solid #d4ddd4',
+              background: '#f8faf8',
+              outline: 'none',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#2e7d32';
+              e.target.style.boxShadow = '0 0 0 3px rgba(46,125,50,0.1)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#d4ddd4';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+        </Box>
       </Box>
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <DataGrid
             rows={filteredPrices}
             columns={columns}

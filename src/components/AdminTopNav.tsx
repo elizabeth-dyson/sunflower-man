@@ -11,26 +11,40 @@ const nav = [
 
 export default function AdminTopNav() {
   const pathname = usePathname();
+  const isHome = pathname === '/admin';
+
   return (
-    <nav className="w-full border-b bg-white/70 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-        <Link href="/admin" className="text-xl font-semibold text-green-800">
-          🌱 Admin
+    <nav className="sticky top-0 z-50 w-full border-b border-border bg-white/80 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+        <Link
+          href="/admin"
+          className={`flex items-center gap-2 text-lg font-bold tracking-tight transition-colors ${
+            isHome ? 'text-primary-dark' : 'text-primary-dark hover:text-primary'
+          }`}
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white text-sm">
+            🌻
+          </span>
+          <span>Sunflower Admin</span>
         </Link>
-        <ul className="flex gap-2">
+
+        <ul className="flex items-center gap-1">
           {nav.map((item) => {
             const active = pathname.startsWith(item.path);
             return (
               <li key={item.path}>
                 <Link
                   href={item.path}
-                  className={`rounded-md px-3 py-1 text-sm font-medium ${
+                  className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                     active
-                      ? 'bg-green-50 text-green-800 ring-1 ring-green-200'
-                      : 'text-gray-700 hover:text-green-800 hover:bg-gray-50'
+                      ? 'bg-primary/10 text-primary-dark shadow-sm'
+                      : 'text-text-secondary hover:bg-surface-hover hover:text-primary-dark'
                   }`}
                 >
                   {item.name}
+                  {active && (
+                    <span className="absolute bottom-0 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-primary" />
+                  )}
                 </Link>
               </li>
             );

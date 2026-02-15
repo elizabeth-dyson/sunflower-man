@@ -19,15 +19,28 @@ export default function AdminDashboard() {
   if (!session) return null;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-background">
       <AdminTopNav />
-      <div className="mx-auto max-w-5xl px-4 pt-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-green-800">Admin Dashboard</h1>
+
+      <div className="mx-auto max-w-6xl px-6 pt-8 pb-16">
+        {/* Page header */}
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-primary-dark">
+              Admin Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-text-muted">
+              Manage your seeds, inventory, and pricing
+            </p>
+          </div>
           <LogoutButton />
         </div>
-        <TaskCenter />
-        <DataQuality />
+
+        {/* Task center and data quality */}
+        <div className="space-y-10">
+          <TaskCenter />
+          <DataQuality />
+        </div>
       </div>
     </main>
   );

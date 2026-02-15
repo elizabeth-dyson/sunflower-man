@@ -531,44 +531,111 @@ export default function EditableSeedGrid({
 
   return (
     <>
-      {/* Controls row: LEFT toggle, CENTER search, RIGHT add */}
+      {/* Controls row */}
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center',
           gap: 2,
-          mb: 3, // space below this row before the cards/table
+          mb: 4,
         }}
       >
-        {/* LEFT — toggle */}
+        {/* LEFT - toggle */}
         <Box sx={{ justifySelf: 'start' }}>
-          <Button variant="outlined" onClick={() => setGalleryMode(!galleryMode)}>
-            {galleryMode ? 'SWITCH TO TABLE VIEW' : 'SWITCH TO GALLERY VIEW'}
+          <Button
+            variant="outlined"
+            onClick={() => setGalleryMode(!galleryMode)}
+            sx={{
+              borderColor: '#c8d6c8',
+              color: '#2e7d32',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              px: 3,
+              '&:hover': {
+                borderColor: '#2e7d32',
+                bgcolor: '#f1f8f1',
+              },
+            }}
+          >
+            {galleryMode ? 'Switch to Table' : 'Switch to Gallery'}
           </Button>
         </Box>
 
-        {/* CENTER — search */}
+        {/* CENTER - search */}
         <Box sx={{ justifySelf: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search seeds..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{
-              padding: '0.5rem',
-              fontSize: '1rem',
-              width: 360,
-              borderRadius: '6px',
-              border: '1px solid #ccc',
+          <Box
+            sx={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
             }}
-          />
+          >
+            <Box
+              component="svg"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#7a917a"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              sx={{
+                position: 'absolute',
+                left: 14,
+                width: 16,
+                height: 16,
+                pointerEvents: 'none',
+              }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </Box>
+            <input
+              type="text"
+              placeholder="Search seeds..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{
+                padding: '10px 16px 10px 42px',
+                fontSize: '0.875rem',
+                width: 380,
+                borderRadius: '10px',
+                border: '1px solid #d4ddd4',
+                background: '#f8faf8',
+                outline: 'none',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#2e7d32';
+                e.target.style.boxShadow = '0 0 0 3px rgba(46,125,50,0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#d4ddd4';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </Box>
         </Box>
 
-        {/* RIGHT — add new */}
+        {/* RIGHT - add new */}
         <Box sx={{ justifySelf: 'end' }}>
-          <Button variant="contained" color="primary" onClick={() => setIsAddOpen(true)}>
-            ➕ ADD NEW SEED
+          <Button
+            variant="contained"
+            onClick={() => setIsAddOpen(true)}
+            sx={{
+              bgcolor: '#2e7d32',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              px: 3,
+              boxShadow: '0 2px 6px rgba(46,125,50,0.25)',
+              '&:hover': {
+                bgcolor: '#1b5e20',
+                boxShadow: '0 4px 12px rgba(46,125,50,0.35)',
+              },
+            }}
+          >
+            + Add New Seed
           </Button>
         </Box>
       </Box>
@@ -602,40 +669,98 @@ export default function EditableSeedGrid({
         </DialogActions>
       </Dialog>
 
-      {/* Gallery View (no MUI Grid — no warnings) */}
+      {/* Gallery View */}
       {galleryMode ? (
         <Box
           display="grid"
           gridTemplateColumns={{
-            xs: 'repeat(1, 1fr)', // mobile
-            sm: 'repeat(2, 1fr)', // small screens
-            md: 'repeat(3, 1fr)', // medium
-            lg: 'repeat(4, 1fr)', // large
+            xs: 'repeat(1, 1fr)',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+            lg: 'repeat(4, 1fr)',
           }}
-          gap={8}
+          gap={3}
         >
           {filteredSeeds.map((seed) => {
             const firstPath = imagesMap[seed.id]?.[0]?.image_path;
             const imgUrl = toPublicUrl(firstPath);
             return (
-              <Card key={seed.id} onClick={() => openSeedModal(seed)} sx={{ cursor: 'pointer' }}>
-                <CardMedia
-                  component="img"
-                  image={imgUrl || '/placeholder.png'}
-                  alt={seed.name}
-                  sx={{
-                    width: '100%',
-                    height: 140,
-                    objectFit: 'cover',
-                    borderRadius: 1,
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.png';
-                  }}
-                />
-                <CardContent>
-                  <Typography variant="h6">{seed.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
+              <Card
+                key={seed.id}
+                onClick={() => openSeedModal(seed)}
+                sx={{
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  border: '1px solid #e8efe8',
+                  borderRadius: '14px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                    transform: 'translateY(-3px)',
+                    borderColor: '#c8d6c8',
+                  },
+                }}
+              >
+                <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+                  <CardMedia
+                    component="img"
+                    image={imgUrl || '/placeholder.png'}
+                    alt={seed.name}
+                    sx={{
+                      width: '100%',
+                      height: 160,
+                      objectFit: 'cover',
+                      transition: 'transform 0.3s ease',
+                      '.MuiCard-root:hover &': {
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder.png';
+                    }}
+                  />
+                  {seed.is_active && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        bgcolor: '#2e7d32',
+                        color: 'white',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        px: 1,
+                        py: 0.25,
+                        borderRadius: '6px',
+                        letterSpacing: '0.03em',
+                      }}
+                    >
+                      ACTIVE
+                    </Box>
+                  )}
+                </Box>
+                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#1a2e1a',
+                      lineHeight: 1.3,
+                      mb: 0.5,
+                    }}
+                  >
+                    {seed.name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: '#7a917a',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                    }}
+                  >
                     {seed.category} / {seed.type}
                   </Typography>
                 </CardContent>
@@ -645,7 +770,7 @@ export default function EditableSeedGrid({
         </Box>
       ) : (
         // Table View
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <DataGrid
               rows={filteredSeeds}
               columns={columns}
