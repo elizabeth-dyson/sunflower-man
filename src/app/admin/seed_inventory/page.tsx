@@ -38,10 +38,12 @@ export default async function InventoryPage({
   const seedIds = parseSeedIds(sp);
 
   return (
-    <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem 3rem' }}>
+    <div>
       <HeaderBar title="Seed Inventory" emoji="🌻" />
 
-      <EditableInventoryGrid initialSeedIds={seedIds} initialInventory={inventory} />
+      <div style={{ padding: '0 1.5rem 3rem' }}>
+        <EditableInventoryGrid initialSeedIds={seedIds} initialInventory={inventory} />
+      </div>
     </div>
   );
 }

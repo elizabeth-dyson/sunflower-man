@@ -111,19 +111,21 @@ export default async function SeedsPage({
   )
 
   return (
-    <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem 3rem' }}>
+    <div>
       <HeaderBar title="Seed Types" emoji="🌻" />
 
-      <EditableSeedGrid 
-        initialSeeds={seeds} 
-        categoryOptions={categories} 
-        typeOptions={types} 
-        nameOptions={names} 
-        sourceOptions={sources} 
-        sunlightOptions={sunlights} 
-        initialSeedIds={seedIds}
-        initialGalleryMode={initialGalleryMode} 
-      />
+      <div style={{ padding: '0 1.5rem 3rem' }}>
+        <EditableSeedGrid 
+          initialSeeds={seeds} 
+          categoryOptions={categories} 
+          typeOptions={types} 
+          nameOptions={names} 
+          sourceOptions={sources} 
+          sunlightOptions={sunlights} 
+          initialSeedIds={seedIds}
+          initialGalleryMode={initialGalleryMode} 
+        />
+      </div>
     </div>
   );
 }
